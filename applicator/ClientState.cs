@@ -72,7 +72,7 @@ namespace Purify
                 throw new IOException("原版文件备份验证失败。");
             record.appVersion = scheme.Rules.target.appVersion;
             record.scheme = scheme.Entry.name;
-            record.schemeFrom = "online";
+            record.schemeFrom = scheme.IsLocal ? "embedded" : "online";
             record.corePending = scheme.Entry.outputSha256;
             Save(record);
             return record;
@@ -147,15 +147,57 @@ namespace Purify
             finally { if (File.Exists(staged)) File.Delete(staged); }
         }
 
-        internal void MoveComponents(IEnumerable<string> paths, Action<string> log)
+        internal List<KeyValuePair<string, bool>> InspectComponents(Scheme scheme)
+        {
+            var options = new List<KeyValuePair<string, bool>>();
+            foreach (string relative in ComponentPaths(scheme))
+            {
+                bool removed = Exists(RemovedPath(relative));
+                if (removed || Exists(Client.Under(relative)))
+                    options.Add(new KeyValuePair<string, bool>(relative, removed));
+            }
+            return options;
+        }
+
+        internal HashSet<string> ComponentPaths(Scheme scheme)
+        {
+            var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string path in scheme.Components)
+            {
+                Client.Under(path);
+                string relative = path.Replace('/', '\\');
+                RemovedPath(relative);
+                paths.Add(relative);
+            }
+            return paths;
+        }
+
+        private string RemovedPath(string relative)
+        {
+            return Client.Under(@"nd_purify\removed\" + relative);
+        }
+
+        private static bool Exists(string path)
+        {
+            return File.Exists(path) || Directory.Exists(path);
+        }
+
+        internal bool MoveComponents(IEnumerable<string> paths, Action<string> log)
         {
             var moves = ReadMoves();
+            bool complete = true;
             foreach (string relative in paths)
             {
                 string source = Client.Under(relative);
-                string target = Client.Under(@"nd_purify\removed\" + relative);
-                if ((!File.Exists(source) && !Directory.Exists(source)) || File.Exists(target) || Directory.Exists(target))
+                string target = RemovedPath(relative);
+                if (!Exists(source))
                     continue;
+                if (Exists(target))
+                {
+                    log("组件与备份同时存在，已保留两个位置：" + relative);
+                    complete = false;
+                    continue;
+                }
                 if (!moves.Any(entry => string.Equals(entry.rel, relative, StringComparison.OrdinalIgnoreCase)))
                 {
                     moves.Add(new RemovedItem { rel = relative, stage = "applicator", bytes = File.Exists(source) ? new FileInfo(source).Length : 0 });
@@ -171,24 +213,40 @@ namespace Purify
                         File.Move(source, target);
                     log("已移出组件：" + relative);
                 }
-                catch (IOException ex) { log("组件仍在使用，已保留：" + relative + " (" + ex.Message + ")"); }
-                catch (UnauthorizedAccessException ex) { log("无法移动，已保留：" + relative + " (" + ex.Message + ")"); }
+                catch (IOException ex)
+                {
+                    log("无法移动组件，已保留：" + relative + " (" + ex.Message + ")");
+                    complete = false;
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    log("无法移动组件，已保留：" + relative + " (" + ex.Message + ")");
+                    complete = false;
+                }
             }
+            return complete;
         }
 
-        internal bool RestoreComponents(Action<string> log)
+        internal bool RestoreComponents(Action<string> log, ISet<string> paths = null)
         {
             var remaining = new List<RemovedItem>();
+            bool complete = true;
             foreach (var move in ReadMoves())
             {
-                string target = Client.Under(move.rel);
-                string source = Client.Under(@"nd_purify\removed\" + move.rel);
-                if (!Directory.Exists(source) && !File.Exists(source))
+                if (paths != null && !paths.Contains(move.rel))
+                {
+                    remaining.Add(move);
                     continue;
-                if (Directory.Exists(target) || File.Exists(target))
+                }
+                string target = Client.Under(move.rel);
+                string source = RemovedPath(move.rel);
+                if (!Exists(source))
+                    continue;
+                if (Exists(target))
                 {
                     remaining.Add(move);
                     log("当前位置已有同名文件，备份已保留：" + move.rel);
+                    complete = false;
                     continue;
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(target));
@@ -200,7 +258,7 @@ namespace Purify
             }
             if (File.Exists(Client.MoveLog))
                 Formats.WriteJson(Client.MoveLog, remaining);
-            return remaining.Count == 0;
+            return complete;
         }
 
         private List<RemovedItem> ReadMoves()
@@ -225,7 +283,7 @@ namespace Purify
                 object bytes, stage;
                 map.TryGetValue("bytes", out bytes);
                 map.TryGetValue("stage", out stage);
-                moves.Add(new RemovedItem { rel = (string)value, bytes = Convert.ToInt64(bytes), stage = stage as string });
+                moves.Add(new RemovedItem { rel = ((string)value).Replace('/', '\\'), bytes = Convert.ToInt64(bytes), stage = stage as string });
             }
             else if (map.TryGetValue("value", out value))
                 AddMoves(value, moves);

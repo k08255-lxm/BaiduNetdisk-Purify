@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -7,27 +8,28 @@ namespace Purify
 {
     internal sealed class ApplyService
     {
-        private readonly SchemeSource source;
         private readonly Action<string> log;
         private readonly bool configureDesktop;
 
-        internal ApplyService(SchemeSource source, Action<string> log, bool configureDesktop)
+        internal ApplyService(Action<string> log, bool configureDesktop)
         {
-            this.source = source;
             this.log = log;
             this.configureDesktop = configureDesktop;
         }
 
-        internal void Apply(ClientDirectory client, bool slim)
+        internal bool Apply(ClientDirectory client, Scheme scheme, IEnumerable<string> selections, bool removeOpenWith)
         {
+            bool complete = true;
             Locked(client, delegate
             {
                 var state = new ClientState(client);
-                log("已识别客户端 " + client.Version + "，正在从 GitHub 获取签名方案。");
-                var scheme = source.Resolve(state.OriginalHash);
-                log("签名和文件 SHA-256 校验通过，匹配方案 " + scheme.Entry.name + "。");
-                foreach (string path in scheme.Components)
-                    client.Under(path);
+                if (state.OriginalHash != scheme.Entry.coreSha256)
+                    throw new IOException("客户端构建已变化，请重新检查兼容性。");
+                var unselected = state.ComponentPaths(scheme);
+                var selected = new HashSet<string>(selections, StringComparer.OrdinalIgnoreCase);
+                if (!unselected.IsSupersetOf(selected))
+                    throw new InvalidDataException("所选组件与匹配的方案不一致。");
+                unselected.ExceptWith(selected);
 
                 string output = Path.Combine(Path.GetTempPath(), "purify-" + Guid.NewGuid().ToString("N") + ".asar");
                 try
@@ -48,10 +50,12 @@ namespace Purify
                     record.corePending = null;
                     state.Save(record);
                     state.DisableUpdater(record);
-                    if (slim)
+                    complete = state.RestoreComponents(log, unselected);
+                    complete = state.MoveComponents(selected, log) && complete;
+                    if (configureDesktop)
                     {
-                        if (configureDesktop) OpenWith.Remove(state, record);
-                        state.MoveComponents(scheme.Components, log);
+                        if (removeOpenWith) OpenWith.Remove(state, record);
+                        else OpenWith.Restore(state, record);
                     }
                     if (configureDesktop)
                     {
@@ -61,10 +65,11 @@ namespace Purify
                             throw new IOException("客户端已应用补丁。后台提示处理器启动失败，可重新应用方案或使用还原。", ex);
                         }
                     }
-                    log("方案已应用。请正常打开百度网盘。");
+                    log(complete ? "方案已应用。请正常打开百度网盘。" : "核心补丁已应用，部分组件未能调整。请查看日志。");
                 }
                 finally { if (File.Exists(output)) File.Delete(output); }
             });
+            return complete;
         }
 
         internal bool Restore(ClientDirectory client)
@@ -86,7 +91,7 @@ namespace Purify
                 state.RestoreUpdater();
                 fullyRestored = state.RestoreComponents(log);
                 if (configureDesktop)
-                    OpenWith.Restore(state);
+                    OpenWith.Restore(state, state.Record);
                 bool legacyShell = File.Exists(client.Under(@"nd_purify\removed\shellext\state.json"));
                 if (legacyShell)
                     log("客户端文件已还原。旧版移除的 Windows 资源管理器注册仍需用旧版卸载器恢复。");
