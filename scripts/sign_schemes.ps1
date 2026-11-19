@@ -37,7 +37,11 @@ if ($InitKey) {
 
 # ---- rebuild the index ----
 $entries = @()
-foreach ($d in Get-ChildItem -LiteralPath $schemes -Directory | Sort-Object Name) {
+$dirs = @(Get-ChildItem -LiteralPath $schemes -Directory)
+if ($dirs.Name -match '^\.(build|previous)-[0-9a-f]{32}$') {
+  throw 'scheme staging directories exist; finish or recover the in-progress build before signing'
+}
+foreach ($d in $dirs | Sort-Object Name) {
   $set = [IO.File]::ReadAllText((Join-Path $d.FullName 'patchset.json')) | ConvertFrom-Json
   if (-not $set.expectedOutputSha256) { throw "$($d.Name): patchset.json has no expectedOutputSha256 (run make_scheme.ps1)" }
   foreach ($req in 'patchset.json', 'components.json') { if (-not (Test-Path -LiteralPath (Join-Path $d.FullName $req))) { throw "$($d.Name): missing $req" } }

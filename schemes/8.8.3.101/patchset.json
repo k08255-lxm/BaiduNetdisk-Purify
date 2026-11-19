@@ -1,0 +1,839 @@
+{
+    "format":  1,
+    "product":  "BaiduNetdisk de-marketing patch",
+    "target":  {
+                   "appVersion":  "8.8.3.101",
+                   "originalCoreSha256":  "0a2a7bbeea5c922f05172d49e2bb54d84c273b1685e6d5187e3cdc0ae02ad604"
+               },
+    "expectedOutputSha256":  "5c98f540f045a758ede26f843398b57bee7758970b3db17a5538f3bfd1fc4a81",
+    "mark":  "/*nd_purify*/",
+    "newFiles":  [
+                     "__nd_purify_main.js",
+                     "__nd_purify_renderer.js"
+                 ],
+    "notApplicable":  [
+                          "renderer.ad-side-activity-visible",
+                          "toolbar_menu.image-preview-hidden-btns",
+                          "toolbar_menu.image-preview-old-ai-nav-static",
+                          "main_extra.global-hotkey-skip",
+                          "settings.hotkey-ai",
+                          "settings.hotkey-backup"
+                      ],
+    "skipped":  [
+
+                ],
+    "patches":  [
+                    {
+                        "file":  "main.js",
+                        "name":  "main.load-module 加载去营销模块（webpack 4: module.exports=function(e){ / webpack 5: (()=\u003e{ 前）",
+                        "kind":  "literal",
+                        "find":  "module.exports=function(e){",
+                        "repl":  "/*nd_purify*/try{require(require(\"path\").join(__dirname,\"__nd_purify_main.js\"))}catch(__e){console.error(\"nd_purify load failed\",__e)}module.exports=function(e){"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main.fetchApi 原生HTTP出口过滤(fetchApi)",
+                        "kind":  "literal",
+                        "find":  "fetchApi(e,n,t,i=\"post\"){",
+                        "repl":  "fetchApi(e,n,t,i=\"post\"){/*nd_purify*/const __p=global.__ndPurify\u0026\u0026global.__ndPurify.filterApi(e,n);if(__p\u0026\u0026__p.block)return Promise.resolve({httpTask:-1,errNo:-1,ajaxError:!0});if(__p\u0026\u0026__p.url)e=__p.url;"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main.axios-net 主进程axios($Net)过滤",
+                        "kind":  "literal",
+                        "find":  "S.app.$Net=X(H,i),",
+                        "repl":  "S.app.$Net=X(H,i),/*nd_purify*/global.__ndPurify\u0026\u0026global.__ndPurify.guardAxios\u0026\u0026global.__ndPurify.guardAxios(S.app.$Net),"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main.webrequest Chromium网络过滤(onBeforeRequest)",
+                        "kind":  "literal",
+                        "find":  "P.session.defaultSession.webRequest.onBeforeRequest((e,n)=\u003e{",
+                        "repl":  "P.session.defaultSession.webRequest.onBeforeRequest((e,n)=\u003e{/*nd_purify*/const __r=global.__ndPurify\u0026\u0026global.__ndPurify.filterWeb(e.url);if(__r\u0026\u0026__r.cancel)return n({cancel:!0});if(__r\u0026\u0026__r.redirectURL)return n({cancel:!1,redirectURL:__r.redirectURL});"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main.pallet-ad 右下角广告窗(showPalletAdv)",
+                        "kind":  "literal",
+                        "find":  "o.ipcMain.on(\"showPalletAdv\",(e,n)=\u003e{",
+                        "repl":  "o.ipcMain.on(\"showPalletAdv\",(e,n)=\u003e{/*nd_purify*/return;"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main.linkshare-ad 分享页广告(onShowLinkShareAd)",
+                        "kind":  "literal",
+                        "find":  "o.ipcMain.on(\"onShowLinkShareAd\",(n,t,i)=\u003e{",
+                        "repl":  "o.ipcMain.on(\"onShowLinkShareAd\",(n,t,i)=\u003e{/*nd_purify*/return;"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main.game-tab 游戏中心标签页(openGameTab)",
+                        "kind":  "literal",
+                        "find":  "(e,n)=\u003e{o.app.mainBrowserwindow.webContents.send(\"openGameTab\"",
+                        "repl":  "(e,n)=\u003e{/*nd_purify*/return;o.app.mainBrowserwindow.webContents.send(\"openGameTab\""
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.ad-member-channel 广告状态置空 setMemberChannel",
+                        "kind":  "literal",
+                        "find":  "setMemberChannel(e,t){e.memberChannel=t}",
+                        "repl":  "setMemberChannel(e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.ad-header-ad 广告状态置空 setHeaderAd",
+                        "kind":  "literal",
+                        "find":  "setHeaderAd(e,t){e.headerAd=t}",
+                        "repl":  "setHeaderAd(e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.ad-aside-ad 广告状态置空 setAsideAd",
+                        "kind":  "literal",
+                        "find":  "setAsideAd(e,t){e.asideAd=t}",
+                        "repl":  "setAsideAd(e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.ad-text-ad 广告状态置空 setTextAd",
+                        "kind":  "literal",
+                        "find":  "setTextAd(e,t){e.textAd=t}",
+                        "repl":  "setTextAd(e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.ad-activity-config 广告状态置空 setActivityConfig",
+                        "kind":  "literal",
+                        "find":  "setActivityConfig(e,t){e.activityConfig=t}",
+                        "repl":  "setActivityConfig(e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.ad-transfer-ad 广告状态置空 setTransferAd",
+                        "kind":  "literal",
+                        "find":  "setTransferAd(e,t){e.transferAd=t}",
+                        "repl":  "setTransferAd(e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.ad-transfer-ad-native 广告状态置空 setTransferAdNative",
+                        "kind":  "literal",
+                        "find":  "setTransferAdNative(e,t){e.transferAdNative=t}",
+                        "repl":  "setTransferAdNative(e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.ad-pallet-ad 广告状态置空 setPalletAd",
+                        "kind":  "literal",
+                        "find":  "setPalletAd(e,t){e.palletAd=t}",
+                        "repl":  "setPalletAd(e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.ad-link-share-ad-native 广告状态置空 setLinkShareAdNative",
+                        "kind":  "literal",
+                        "find":  "setLinkShareAdNative(e,t){e.linkShareAdNative=t}",
+                        "repl":  "setLinkShareAdNative(e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.ad-link-share-detail-ad-native 广告状态置空 setLinkShareDetailAdNative",
+                        "kind":  "literal",
+                        "find":  "setLinkShareDetailAdNative(e,t){e.linkShareDetailAdNative=t}",
+                        "repl":  "setLinkShareDetailAdNative(e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.sidebar-filter 移除侧栏 同步/消息/工具/库库AI/知识库",
+                        "kind":  "literal",
+                        "find":  "return i.top=this.addMainItemTip(i.top),i}",
+                        "repl":  "return i.top=this.addMainItemTip(i.top.filter(function(x){/*nd_purify*/var ev=x\u0026\u0026(x.evt||(x.list\u0026\u0026x.list[0]\u0026\u0026x.list[0].evt));return [\"conversationEvt\",\"utilEvt\",\"workspace\",\"autoBackupEvt\",\"aIAssistantEvt\",\"aiKnowledgeEvt\",\"coSpaceEvt\"].indexOf(ev)\u003c0;})),i}"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.sidebar-download-entry 侧栏底部: 去「下载手机/各平台客户端」入口",
+                        "kind":  "literal",
+                        "find":  "bottom:Object(yo.e)()||this.comMasAble?[]:[{img:Gs,classStr:\"wp-aside-nav__main-utils\",uri:Object(ue.li)(ue.vc)}]",
+                        "repl":  "bottom:/*nd_purify*/[]"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.reward-task 顶栏: 去「福利任务」(🎁)",
+                        "kind":  "literal",
+                        "find":  "!this.isCoSpaceRoute\u0026\u0026this.isShowRewardTask\u0026\u0026t.push({key:\"headerRewardTask\",comp:\"headerRewardTask\"})",
+                        "repl":  "/*nd_purify*/!1\u0026\u0026t.push({key:\"headerRewardTask\",comp:\"headerRewardTask\"})"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.vip-btn 顶栏: 去「会员中心」按钮",
+                        "kind":  "literal",
+                        "find":  "this.isCoSpaceRoute||t.push({comp:\"headerVipBtn\",evt:\"vipCenterEvt\"})",
+                        "repl":  "/*nd_purify*/!0||t.push({comp:\"headerVipBtn\",evt:\"vipCenterEvt\"})"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.game 顶栏: 去「游戏中心」",
+                        "kind":  "literal",
+                        "find":  "t=[].concat(E()(t),[{comp:\"headerGame\",evt:\"gameEvt\",icon:\"icon-game\"}])",
+                        "repl":  "/*nd_purify*/t=t"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.gold-coin 顶栏: 去「金币」",
+                        "kind":  "literal",
+                        "find":  "this.isShowGoldCoinIcon\u0026\u0026t.push({comp:\"headerGoldCoin\",evt:\"goldCoinCenter\",icon:\"gold-coin\"})",
+                        "repl":  "/*nd_purify*/!1\u0026\u0026t.push({comp:\"headerGoldCoin\",evt:\"goldCoinCenter\",icon:\"gold-coin\"})"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.menu-update 「≡」菜单: 去「版本升级」(自动更新会覆盖补丁)",
+                        "kind":  "literal",
+                        "find":  "updateConfig:function(){return this.comMasAble?{}:[{icon:\"icon-update\",title:\"版本升级\",name:\"update\",evt:\"versionUpdateEvt\"}]}",
+                        "repl":  "updateConfig:function(){/*nd_purify*/return[]}"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.card-keep-nav 头像卡片: 只保留 帮助中心/切换账号",
+                        "kind":  "literal",
+                        "find":  "a=e.channelList||[],o=e.navList||[],n=e.benefits\u0026\u0026",
+                        "repl":  "/*nd_purify*/a=[],o=(e.navList||[]).filter(function(x){return x\u0026\u0026[\"helpCenter\",\"logout\"].indexOf(x.evt)\u003e=0}),n=e.benefits\u0026\u0026"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.card-no-ai-member 头像卡片: 去 AI点数 / 会员卡片 / 推广频道",
+                        "kind":  "literal",
+                        "find":  "\"ai-credit\":e.aiCredit,\"membership-card\":e.membershipCard,\"channel-list\":e.channelList,",
+                        "repl":  "/*nd_purify*/\"ai-credit\":null,\"membership-card\":null,\"channel-list\":[],"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.card-nav-whitelist 头像卡片: 导航事件白名单(头像点击不再打开会员中心)",
+                        "kind":  "literal",
+                        "find":  "onNav:function(e){",
+                        "repl":  "onNav:function(e){/*nd_purify*/if(!e||[\"helpCenter\",\"logout\"].indexOf(e.evt)\u003c0)return;"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.user-vip-tip 头像: 去会员到期/续费气泡 (attrs:{userHref:)",
+                        "kind":  "literal",
+                        "find":  "t(\"user-vip-tip\",{staticClass:\"wp-header-user__tooltip\",attrs:{userHref:",
+                        "repl":  "/*nd_purify*/(function(){return e._e()})(\"user-vip-tip\",{staticClass:\"wp-header-user__tooltip\",attrs:{userHref:"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.user-vip-tip-adapter 头像: 去会员到期/续费气泡 (attrs:{\"user-href\":)",
+                        "kind":  "literal",
+                        "find":  "t(\"user-vip-tip\",{staticClass:\"wp-header-user__tooltip\",attrs:{\"user-href\":",
+                        "repl":  "/*nd_purify*/(function(){return e._e()})(\"user-vip-tip\",{staticClass:\"wp-header-user__tooltip\",attrs:{\"user-href\":"
+                    },
+                    {
+                        "file":  "104.js",
+                        "name":  "header.popover-ai-area 头像卡片: AI点数区 仅在有数据时渲染(适配层已传 null)",
+                        "kind":  "literal",
+                        "find":  "v(\"svg\",{attrs:{width:\"1\",height:\"10\",viewBox:\"0 0 1 10\",fill:\"none\",xmlns:\"http://www.w3.org/2000/svg\"}},[v(\"line\",{attrs:{x1:\"0.25\",y1:\"1.09279e-08\",x2:\"0.25\",y2:\"10\",stroke:\"#ebeef5\",\"stroke-width\":\"0.5\"}})]),v(\"div\",{staticClass:\"uip-ai-area\",on:{click:P.emitAiPointNav}}",
+                        "repl":  "/*nd_purify*/(f.aiCredit?v:function(){return f._e()})(\"svg\",{attrs:{width:\"1\",height:\"10\",viewBox:\"0 0 1 10\",fill:\"none\",xmlns:\"http://www.w3.org/2000/svg\"}},[v(\"line\",{attrs:{x1:\"0.25\",y1:\"1.09279e-08\",x2:\"0.25\",y2:\"10\",stroke:\"#ebeef5\",\"stroke-width\":\"0.5\"}})]),(f.aiCredit?v:function(){return f._e()})(\"div\",{staticClass:\"uip-ai-area\",on:{click:P.emitAiPointNav}}"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.chat-webview 库库AI: 底部隐藏 webview 不加载",
+                        "kind":  "literal",
+                        "find":  "loadUrl(){let e=new URL(\"http://not.exists\");",
+                        "repl":  "loadUrl(){let e=new URL(\"http://not.exists\");/*nd_purify*/if(\"bottom\"===this.position)return;"
+                    },
+                    {
+                        "file":  "46.js",
+                        "name":  "filelist_misc.hover-knowledge-icon 行内按钮: 去知识库 (canShowKnowledgeIcon)",
+                        "kind":  "literal",
+                        "find":  "canShowKnowledgeIcon:function(){",
+                        "repl":  "canShowKnowledgeIcon:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "49.js",
+                        "name":  "filelist_misc.hover-knowledge-icon 行内按钮: 去知识库 (canShowKnowledgeIcon)",
+                        "kind":  "literal",
+                        "find":  "canShowKnowledgeIcon:function(){",
+                        "repl":  "canShowKnowledgeIcon:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "50.js",
+                        "name":  "filelist_misc.hover-knowledge-icon 行内按钮: 去知识库 (canShowKnowledgeIcon)",
+                        "kind":  "literal",
+                        "find":  "canShowKnowledgeIcon:function(){",
+                        "repl":  "canShowKnowledgeIcon:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "71.js",
+                        "name":  "filelist_misc.hover-knowledge-icon 行内按钮: 去知识库 (canShowKnowledgeIcon)",
+                        "kind":  "literal",
+                        "find":  "canShowKnowledgeIcon:function(){",
+                        "repl":  "canShowKnowledgeIcon:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "75.js",
+                        "name":  "filelist_misc.hover-knowledge-icon 行内按钮: 去知识库 (canShowKnowledgeIcon)",
+                        "kind":  "literal",
+                        "find":  "canShowKnowledgeIcon:function(){",
+                        "repl":  "canShowKnowledgeIcon:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "46.js",
+                        "name":  "filelist_misc.hover-ai-summary-icon 行内按钮: 去AI总结 (canShowAiSummaryIcon)",
+                        "kind":  "literal",
+                        "find":  "canShowAiSummaryIcon:function(){",
+                        "repl":  "canShowAiSummaryIcon:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "49.js",
+                        "name":  "filelist_misc.hover-ai-summary-icon 行内按钮: 去AI总结 (canShowAiSummaryIcon)",
+                        "kind":  "literal",
+                        "find":  "canShowAiSummaryIcon:function(){",
+                        "repl":  "canShowAiSummaryIcon:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "50.js",
+                        "name":  "filelist_misc.hover-ai-summary-icon 行内按钮: 去AI总结 (canShowAiSummaryIcon)",
+                        "kind":  "literal",
+                        "find":  "canShowAiSummaryIcon:function(){",
+                        "repl":  "canShowAiSummaryIcon:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "71.js",
+                        "name":  "filelist_misc.hover-ai-summary-icon 行内按钮: 去AI总结 (canShowAiSummaryIcon)",
+                        "kind":  "literal",
+                        "find":  "canShowAiSummaryIcon:function(){",
+                        "repl":  "canShowAiSummaryIcon:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "75.js",
+                        "name":  "filelist_misc.hover-ai-summary-icon 行内按钮: 去AI总结 (canShowAiSummaryIcon)",
+                        "kind":  "literal",
+                        "find":  "canShowAiSummaryIcon:function(){",
+                        "repl":  "canShowAiSummaryIcon:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main_extra.pc-na-trans-switch 关闭「用手机打开」总开关(右键/更多菜单/预览)",
+                        "kind":  "literal",
+                        "find":  "S.app.$pcNaTransSwitch=\"0\"!==(S.app.$getAppConfByKey(\"application\",\"pc_na_trans_switch\")||\"0\")",
+                        "repl":  "S.app.$pcNaTransSwitch=/*nd_purify*/!1"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main_extra.file-transfer-menu 传输页: 去「文件快传」(renderer.js + main.js)",
+                        "kind":  "literal",
+                        "find":  ",{\"type\":\"fileTransfer\",\"value\":\"文件快传\",\"active\":0,\"icon\":\"menu_fileTransfer\",\"router\":\"fileTransfer\"}",
+                        "repl":  ""
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "main_extra.file-transfer-menu 传输页: 去「文件快传」(renderer.js + main.js)",
+                        "kind":  "literal",
+                        "find":  ",{\"type\":\"fileTransfer\",\"value\":\"文件快传\",\"active\":0,\"icon\":\"menu_fileTransfer\",\"router\":\"fileTransfer\"}",
+                        "repl":  ""
+                    },
+                    {
+                        "file":  "70.js",
+                        "name":  "settings.quick-transfer-section 设置: 去「文件快传 / 快传位置」",
+                        "kind":  "literal",
+                        "find":  "t.isWin?e(\"section\",{staticClass:\"transfer-section transfer-quick-path\"}",
+                        "repl":  "/*nd_purify*/!1?e(\"section\",{staticClass:\"transfer-section transfer-quick-path\"}"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "filelist_misc.ai-download-entrance 云添加: 去「添加AI下载任务」(aiDownloadEntranceVisible)",
+                        "kind":  "literal",
+                        "find":  "e.aiDownloadEntranceVisible=Object(X.d)(t)",
+                        "repl":  "e.aiDownloadEntranceVisible=/*nd_purify*/!1"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "filelist_misc.ai-download-entrance 云添加: 去「添加AI下载任务」(aiDownloadEntranceVisible)",
+                        "kind":  "literal",
+                        "find":  "e.aiDownloadEntranceVisible=Object(lg.d)(t)",
+                        "repl":  "e.aiDownloadEntranceVisible=/*nd_purify*/!1"
+                    },
+                    {
+                        "file":  "46.js",
+                        "name":  "filelist_misc.ai-download-entrance 云添加: 去「添加AI下载任务」(aiDownloadEntranceVisible)",
+                        "kind":  "literal",
+                        "find":  "e.aiDownloadEntranceVisible=Object(K.d)(t)",
+                        "repl":  "e.aiDownloadEntranceVisible=/*nd_purify*/!1"
+                    },
+                    {
+                        "file":  "49.js",
+                        "name":  "filelist_misc.ai-download-entrance 云添加: 去「添加AI下载任务」(aiDownloadEntranceVisible)",
+                        "kind":  "literal",
+                        "find":  "e.aiDownloadEntranceVisible=Object(K.d)(t)",
+                        "repl":  "e.aiDownloadEntranceVisible=/*nd_purify*/!1"
+                    },
+                    {
+                        "file":  "50.js",
+                        "name":  "filelist_misc.ai-download-entrance 云添加: 去「添加AI下载任务」(aiDownloadEntranceVisible)",
+                        "kind":  "literal",
+                        "find":  "e.aiDownloadEntranceVisible=Object(K.d)(t)",
+                        "repl":  "e.aiDownloadEntranceVisible=/*nd_purify*/!1"
+                    },
+                    {
+                        "file":  "56.js",
+                        "name":  "filelist_misc.ai-download-entrance 云添加: 去「添加AI下载任务」(aiDownloadEntranceVisible)",
+                        "kind":  "literal",
+                        "find":  "e.aiDownloadEntranceVisible=Object(J.d)(t)",
+                        "repl":  "e.aiDownloadEntranceVisible=/*nd_purify*/!1"
+                    },
+                    {
+                        "file":  "59.js",
+                        "name":  "filelist_misc.ai-download-entrance 云添加: 去「添加AI下载任务」(aiDownloadEntranceVisible)",
+                        "kind":  "literal",
+                        "find":  "e.aiDownloadEntranceVisible=Object(J.d)(t)",
+                        "repl":  "e.aiDownloadEntranceVisible=/*nd_purify*/!1"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "filelist_misc.ai-download-entrance 云添加: 去「添加AI下载任务」(aiDownloadEntranceVisible)",
+                        "kind":  "literal",
+                        "find":  "e.aiDownloadEntranceVisible=Object(ur.d)(t)",
+                        "repl":  "e.aiDownloadEntranceVisible=/*nd_purify*/!1"
+                    },
+                    {
+                        "file":  "56.js",
+                        "name":  "filelist_misc.transfer-cloudprint-btn 传输列表: 去「云打印」按钮",
+                        "kind":  "literal",
+                        "find":  "e.comMasAble||i.row.cowork_id?e._e():t(\"div\",{staticClass:\"cloud-print\"",
+                        "repl":  "/*nd_purify*/!0?e._e():t(\"div\",{staticClass:\"cloud-print\""
+                    },
+                    {
+                        "file":  "59.js",
+                        "name":  "filelist_misc.transfer-cloudprint-btn 传输列表: 去「云打印」按钮",
+                        "kind":  "literal",
+                        "find":  "e.comMasAble||i.row.cowork_id?e._e():t(\"div\",{staticClass:\"cloud-print\"",
+                        "repl":  "/*nd_purify*/!0?e._e():t(\"div\",{staticClass:\"cloud-print\""
+                    },
+                    {
+                        "file":  "56.js",
+                        "name":  "filelist_misc.transfer-cloudprint-menu 传输列表: 去右键「云打印」",
+                        "kind":  "literal",
+                        "find":  "Object(a.b)(e.server_path)\u0026\u0026i.push({name:\"云打印\"",
+                        "repl":  "/*nd_purify*/!1\u0026\u0026i.push({name:\"云打印\""
+                    },
+                    {
+                        "file":  "59.js",
+                        "name":  "filelist_misc.transfer-cloudprint-menu 传输列表: 去右键「云打印」",
+                        "kind":  "literal",
+                        "find":  "Object(o.b)(e.server_path)\u0026\u0026i.push({name:\"云打印\"",
+                        "repl":  "/*nd_purify*/!1\u0026\u0026i.push({name:\"云打印\""
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main_extra.tray-menu-hook 托盘菜单: 去版本升级/一键反馈/同步/回收站，用户名与空间不跳购买页",
+                        "kind":  "literal",
+                        "find":  "return i.Menu.buildFromTemplate(N)},$=()=\u003e{",
+                        "repl":  "return i.Menu.buildFromTemplate(/*nd_purify*/global.__ndPurify\u0026\u0026global.__ndPurify.trayMenu?global.__ndPurify.trayMenu(N,{user:h,ws:s}):N)},$=()=\u003e{"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "header.chat-visible 库库AI: 禁用对话面板开关",
+                        "kind":  "literal",
+                        "find":  "case\"changeChatVisible\":if(",
+                        "repl":  "case\"changeChatVisible\":/*nd_purify*/break;if("
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "toolbar_menu.left-toolbar 工具条(左): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:e.left_toolbarGroups",
+                        "repl":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:(function(g){/*nd_purify*/var B=[\"new_note\",\"record\",\"lead_pand\",\"export_safe\",\"move_to_safe\",\"lock_safe\",\"add_backup\"];return Array.isArray(g)?g.map(function(x){return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x}):g})(e.left_toolbarGroups)"
+                    },
+                    {
+                        "file":  "46.js",
+                        "name":  "toolbar_menu.left-toolbar 工具条(左): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:e.left_toolbarGroups",
+                        "repl":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:(function(g){/*nd_purify*/var B=[\"new_note\",\"record\",\"lead_pand\",\"export_safe\",\"move_to_safe\",\"lock_safe\",\"add_backup\"];return Array.isArray(g)?g.map(function(x){return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x}):g})(e.left_toolbarGroups)"
+                    },
+                    {
+                        "file":  "49.js",
+                        "name":  "toolbar_menu.left-toolbar 工具条(左): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:e.left_toolbarGroups",
+                        "repl":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:(function(g){/*nd_purify*/var B=[\"new_note\",\"record\",\"lead_pand\",\"export_safe\",\"move_to_safe\",\"lock_safe\",\"add_backup\"];return Array.isArray(g)?g.map(function(x){return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x}):g})(e.left_toolbarGroups)"
+                    },
+                    {
+                        "file":  "50.js",
+                        "name":  "toolbar_menu.left-toolbar 工具条(左): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:e.left_toolbarGroups",
+                        "repl":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:(function(g){/*nd_purify*/var B=[\"new_note\",\"record\",\"lead_pand\",\"export_safe\",\"move_to_safe\",\"lock_safe\",\"add_backup\"];return Array.isArray(g)?g.map(function(x){return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x}):g})(e.left_toolbarGroups)"
+                    },
+                    {
+                        "file":  "56.js",
+                        "name":  "toolbar_menu.left-toolbar 工具条(左): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:e.left_toolbarGroups",
+                        "repl":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:(function(g){/*nd_purify*/var B=[\"new_note\",\"record\",\"lead_pand\",\"export_safe\",\"move_to_safe\",\"lock_safe\",\"add_backup\"];return Array.isArray(g)?g.map(function(x){return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x}):g})(e.left_toolbarGroups)"
+                    },
+                    {
+                        "file":  "59.js",
+                        "name":  "toolbar_menu.left-toolbar 工具条(左): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:e.left_toolbarGroups",
+                        "repl":  "ref:\"leftOperateRef\",staticClass:\"commonBtnsWrap left-operator\"},[t(\"operate-toolbar\",{attrs:{groups:(function(g){/*nd_purify*/var B=[\"new_note\",\"record\",\"lead_pand\",\"export_safe\",\"move_to_safe\",\"lock_safe\",\"add_backup\"];return Array.isArray(g)?g.map(function(x){return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x}):g})(e.left_toolbarGroups)"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "toolbar_menu.right-toolbar 工具条(右): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "o=Object(W.a)([a],this.rightAvailableW)",
+                        "repl":  "o=Object(W.a)([(function(x){/*nd_purify*/var B=[\"add_to_knowledge\",\"ai_summary\",\"ai_photo\",\"switch_text\",\"file_qa\",\"cloud_print\",\"free_board\",\"ai_video_edit\",\"export_safe\"];return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x})(a)],this.rightAvailableW)"
+                    },
+                    {
+                        "file":  "46.js",
+                        "name":  "toolbar_menu.right-toolbar 工具条(右): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "o=Object(H.a)([a],this.rightAvailableW)",
+                        "repl":  "o=Object(H.a)([(function(x){/*nd_purify*/var B=[\"add_to_knowledge\",\"ai_summary\",\"ai_photo\",\"switch_text\",\"file_qa\",\"cloud_print\",\"free_board\",\"ai_video_edit\",\"export_safe\"];return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x})(a)],this.rightAvailableW)"
+                    },
+                    {
+                        "file":  "49.js",
+                        "name":  "toolbar_menu.right-toolbar 工具条(右): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "o=Object(H.a)([a],this.rightAvailableW)",
+                        "repl":  "o=Object(H.a)([(function(x){/*nd_purify*/var B=[\"add_to_knowledge\",\"ai_summary\",\"ai_photo\",\"switch_text\",\"file_qa\",\"cloud_print\",\"free_board\",\"ai_video_edit\",\"export_safe\"];return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x})(a)],this.rightAvailableW)"
+                    },
+                    {
+                        "file":  "50.js",
+                        "name":  "toolbar_menu.right-toolbar 工具条(右): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "o=Object(G.a)([a],this.rightAvailableW)",
+                        "repl":  "o=Object(G.a)([(function(x){/*nd_purify*/var B=[\"add_to_knowledge\",\"ai_summary\",\"ai_photo\",\"switch_text\",\"file_qa\",\"cloud_print\",\"free_board\",\"ai_video_edit\",\"export_safe\"];return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x})(a)],this.rightAvailableW)"
+                    },
+                    {
+                        "file":  "56.js",
+                        "name":  "toolbar_menu.right-toolbar 工具条(右): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "a=Object(G.a)([o],this.rightAvailableW)",
+                        "repl":  "a=Object(G.a)([(function(x){/*nd_purify*/var B=[\"add_to_knowledge\",\"ai_summary\",\"ai_photo\",\"switch_text\",\"file_qa\",\"cloud_print\",\"free_board\",\"ai_video_edit\",\"export_safe\"];return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x})(o)],this.rightAvailableW)"
+                    },
+                    {
+                        "file":  "59.js",
+                        "name":  "toolbar_menu.right-toolbar 工具条(右): 去办公/AI",
+                        "kind":  "literal",
+                        "find":  "o=Object(G.a)([a],this.rightAvailableW)",
+                        "repl":  "o=Object(G.a)([(function(x){/*nd_purify*/var B=[\"add_to_knowledge\",\"ai_summary\",\"ai_photo\",\"switch_text\",\"file_qa\",\"cloud_print\",\"free_board\",\"ai_video_edit\",\"export_safe\"];return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x})(a)],this.rightAvailableW)"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "toolbar_menu.context-menu 右键菜单: 去办公/AI/推销项",
+                        "kind":  "literal",
+                        "find":  "this.operateList=this[e]",
+                        "repl":  "this.operateList=(function(a){/*nd_purify*/var B=[\"AI知识库\",\"以该文件夹新建知识库\",\"添加到我的知识库\",\"导入在线文档\",\"新建笔记\",\"AI PPT\",\"转word\",\"转Word\",\"PDF工具\",\"格式转换\",\"文字提取\",\"文字识别\",\"转文字\",\"导入自由画布\",\"简单学习\",\"AI总结\",\"文件问答\",\"云打印\",\"AI剪辑\",\"AI剪素材\",\"AI视频高光\",\"在线剪辑\",\"图片精修\",\"移入隐藏空间\",\"移出隐藏空间\",\"移入网盘文件\",\"成为超级会员\",\"文档历史版本\",\"复制到同步空间\",\"用手机打开\"];if(!Array.isArray(a))return a;var o=[];a.forEach(function(x){if(x\u0026\u0026B.indexOf(x.name)\u003e=0)return;if(x\u0026\u0026\"line\"===x.type){var p=o[o.length-1];if(!o.length||p\u0026\u0026\"line\"===p.type)return}o.push(x)});while(o.length\u0026\u0026o[o.length-1]\u0026\u0026\"line\"===o[o.length-1].type)o.pop();return o})(this[e])"
+                    },
+                    {
+                        "file":  "47.js",
+                        "name":  "toolbar_menu.context-menu 右键菜单: 去办公/AI/推销项",
+                        "kind":  "literal",
+                        "find":  "this.operateList=this[e]",
+                        "repl":  "this.operateList=(function(a){/*nd_purify*/var B=[\"AI知识库\",\"以该文件夹新建知识库\",\"添加到我的知识库\",\"导入在线文档\",\"新建笔记\",\"AI PPT\",\"转word\",\"转Word\",\"PDF工具\",\"格式转换\",\"文字提取\",\"文字识别\",\"转文字\",\"导入自由画布\",\"简单学习\",\"AI总结\",\"文件问答\",\"云打印\",\"AI剪辑\",\"AI剪素材\",\"AI视频高光\",\"在线剪辑\",\"图片精修\",\"移入隐藏空间\",\"移出隐藏空间\",\"移入网盘文件\",\"成为超级会员\",\"文档历史版本\",\"复制到同步空间\",\"用手机打开\"];if(!Array.isArray(a))return a;var o=[];a.forEach(function(x){if(x\u0026\u0026B.indexOf(x.name)\u003e=0)return;if(x\u0026\u0026\"line\"===x.type){var p=o[o.length-1];if(!o.length||p\u0026\u0026\"line\"===p.type)return}o.push(x)});while(o.length\u0026\u0026o[o.length-1]\u0026\u0026\"line\"===o[o.length-1].type)o.pop();return o})(this[e])"
+                    },
+                    {
+                        "file":  "51.js",
+                        "name":  "toolbar_menu.context-menu 右键菜单: 去办公/AI/推销项",
+                        "kind":  "literal",
+                        "find":  "this.operateList=this[e]",
+                        "repl":  "this.operateList=(function(a){/*nd_purify*/var B=[\"AI知识库\",\"以该文件夹新建知识库\",\"添加到我的知识库\",\"导入在线文档\",\"新建笔记\",\"AI PPT\",\"转word\",\"转Word\",\"PDF工具\",\"格式转换\",\"文字提取\",\"文字识别\",\"转文字\",\"导入自由画布\",\"简单学习\",\"AI总结\",\"文件问答\",\"云打印\",\"AI剪辑\",\"AI剪素材\",\"AI视频高光\",\"在线剪辑\",\"图片精修\",\"移入隐藏空间\",\"移出隐藏空间\",\"移入网盘文件\",\"成为超级会员\",\"文档历史版本\",\"复制到同步空间\",\"用手机打开\"];if(!Array.isArray(a))return a;var o=[];a.forEach(function(x){if(x\u0026\u0026B.indexOf(x.name)\u003e=0)return;if(x\u0026\u0026\"line\"===x.type){var p=o[o.length-1];if(!o.length||p\u0026\u0026\"line\"===p.type)return}o.push(x)});while(o.length\u0026\u0026o[o.length-1]\u0026\u0026\"line\"===o[o.length-1].type)o.pop();return o})(this[e])"
+                    },
+                    {
+                        "file":  "66.js",
+                        "name":  "toolbar_menu.context-menu 右键菜单: 去办公/AI/推销项",
+                        "kind":  "literal",
+                        "find":  "this.operateList=this[e]",
+                        "repl":  "this.operateList=(function(a){/*nd_purify*/var B=[\"AI知识库\",\"以该文件夹新建知识库\",\"添加到我的知识库\",\"导入在线文档\",\"新建笔记\",\"AI PPT\",\"转word\",\"转Word\",\"PDF工具\",\"格式转换\",\"文字提取\",\"文字识别\",\"转文字\",\"导入自由画布\",\"简单学习\",\"AI总结\",\"文件问答\",\"云打印\",\"AI剪辑\",\"AI剪素材\",\"AI视频高光\",\"在线剪辑\",\"图片精修\",\"移入隐藏空间\",\"移出隐藏空间\",\"移入网盘文件\",\"成为超级会员\",\"文档历史版本\",\"复制到同步空间\",\"用手机打开\"];if(!Array.isArray(a))return a;var o=[];a.forEach(function(x){if(x\u0026\u0026B.indexOf(x.name)\u003e=0)return;if(x\u0026\u0026\"line\"===x.type){var p=o[o.length-1];if(!o.length||p\u0026\u0026\"line\"===p.type)return}o.push(x)});while(o.length\u0026\u0026o[o.length-1]\u0026\u0026\"line\"===o[o.length-1].type)o.pop();return o})(this[e])"
+                    },
+                    {
+                        "file":  "148.js",
+                        "name":  "toolbar_menu.image-preview-old-bottom-btns 图片预览(旧版): 去AI修图/文字提取/格式转换按钮",
+                        "kind":  "literal",
+                        "find":  "bottomButtons:function(){return this.imgContainer.fileList\u0026\u0026this.imgContainer.fileList[0]\u0026\u0026\"genflowImgPreview\"===this.imgContainer.fileList[0].from?this.imgContainer.bottomButton.slice(0,1):this.imgContainer.bottomButton}",
+                        "repl":  "bottomButtons:function(){return(function(g){/*nd_purify*/var B=[C.BUTTON_TYPE.AI_PHOTO,C.BUTTON_TYPE.IMG_CONVERT,\"ocr\"].filter(Boolean);return Array.isArray(g)?g.map(function(r){return Array.isArray(r)?r.filter(function(b){return!b||B.indexOf(b.name)\u003c0}):r}).filter(function(r){return!Array.isArray(r)||r.length\u003e0}):g})(this.imgContainer.fileList\u0026\u0026this.imgContainer.fileList[0]\u0026\u0026\"genflowImgPreview\"===this.imgContainer.fileList[0].from?this.imgContainer.bottomButton.slice(0,1):this.imgContainer.bottomButton)}"
+                    },
+                    {
+                        "file":  "148.js",
+                        "name":  "toolbar_menu.image-preview-old-ai-nav 图片预览(旧版): 去右侧库库AI/AI编辑竖条",
+                        "kind":  "literal",
+                        "find":  "ke=function(e){var t=e?Le:[];return Ee||!Object(Q.a)()||1!=+te.$getAppConfByKey(\"application\",\"enable_genflow_penetrate_v2\")?t:[Te].concat(t)}",
+                        "repl":  "ke=function(e){/*nd_purify*/return[]}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.search-ai-tools 搜索栏: 去「AI工具」分类",
+                        "kind":  "literal",
+                        "find":  "e.isNewVersion?t(\"ai-tools\",",
+                        "repl":  "/*nd_purify*/!1?t(\"ai-tools\","
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.search-ai-range 搜索栏: 去「AI全网搜」范围",
+                        "kind":  "literal",
+                        "find":  "this.rangeList.unshift({type:\"range\",name:\"AI全网搜\",key:\"AISearch\"},{type:\"line\"}),",
+                        "repl":  "/*nd_purify*/"
+                    },
+                    {
+                        "file":  "70.js",
+                        "name":  "settings.sidebar-setting-list 设置: 去「展示知识库/展示AI助手」",
+                        "kind":  "literal",
+                        "find":  "sidebarSettingList:[{label:\"展示知识库\",value:!0,confKey:A.Wf.IS_SHOW_KNOWLEDGE},{label:\"展示AI助手\",value:!0,confKey:A.Wf.IS_SHOW_AI_ASSISTANT}]",
+                        "repl":  "sidebarSettingList:/*nd_purify*/[]"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.image-viewer-exist 智能看图: imageViewerExist=false",
+                        "kind":  "literal",
+                        "find":  "imageViewerExist:\"1\"===m.$getSystemParamById(N.b.APP_PARAM_ID_IMAGE_VIEWER_EXIST)",
+                        "repl":  "imageViewerExist:/*nd_purify*/!1"
+                    },
+                    {
+                        "file":  "19.js",
+                        "name":  "filelist_misc.no-new-previewer 智能看图: 禁用新版外置预览器",
+                        "kind":  "literal",
+                        "find":  "isSupportNewPreviewer(e,t){",
+                        "repl":  "isSupportNewPreviewer(e,t){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "filelist_misc.no-new-previewer 智能看图: 禁用新版外置预览器",
+                        "kind":  "literal",
+                        "find":  "isSupportNewPreviewer(e,t){",
+                        "repl":  "isSupportNewPreviewer(e,t){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "47.js",
+                        "name":  "filelist_misc.no-new-previewer 智能看图: 禁用新版外置预览器",
+                        "kind":  "literal",
+                        "find":  "isSupportNewPreviewer(e,t){",
+                        "repl":  "isSupportNewPreviewer(e,t){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "54.js",
+                        "name":  "filelist_misc.no-new-previewer 智能看图: 禁用新版外置预览器",
+                        "kind":  "literal",
+                        "find":  "isSupportNewPreviewer(e,t){",
+                        "repl":  "isSupportNewPreviewer(e,t){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "73.js",
+                        "name":  "filelist_misc.no-new-previewer 智能看图: 禁用新版外置预览器",
+                        "kind":  "literal",
+                        "find":  "isSupportNewPreviewer(e,t){",
+                        "repl":  "isSupportNewPreviewer(e,t){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main_extra.open-image-viewer 下载后打开: 系统默认程序 + 安全类型闸门",
+                        "kind":  "literal",
+                        "find":  "S.app.$openImageViewer=ka",
+                        "repl":  "S.app.$openImageViewer=function(p){/*nd_purify*/try{var s=String(p||\"\").trim();if(!s||s.charAt(0)===\"{\")return;var m=/^\"([^\"]+)\"/.exec(s);var f=m?m[1]:s;if(!f)return;var sh=require(\"electron\").shell;if(/\\.(jpe?g|png|gif|bmp|webp|heic|heif|tiff?|svg|ico|mp4|mkv|avi|mov|wmv|flv|webm|m4v|ts|rmvb|rm|3gp|mp3|wav|flac|aac|ogg|m4a|wma|ape|pdf|docx?|xlsx?|pptx?|wps|et|dps|txt|md|csv|rtf|epub|json|xml|log)$/i.test(f))sh.openPath(f);else sh.showItemInFolder(f)}catch(__e){}}"
+                    },
+                    {
+                        "file":  "70.js",
+                        "name":  "settings.ai-img-previewer 设置: 隐藏「智能看图」两项",
+                        "kind":  "literal",
+                        "find":  "aiImgPreviewer:function(){return",
+                        "repl":  "aiImgPreviewer:function(){/*nd_purify*/return!1;return"
+                    },
+                    {
+                        "file":  "70.js",
+                        "name":  "settings.seston-svip-style 设置: 隐藏「会员样式」",
+                        "kind":  "literal",
+                        "find":  "showSestonSvipStyleSection:function(){return",
+                        "repl":  "showSestonSvipStyleSection:function(){/*nd_purify*/return!1;return"
+                    },
+                    {
+                        "file":  "70.js",
+                        "name":  "settings.media-default-player 设置: 隐藏「智能播放器设为默认」",
+                        "kind":  "literal",
+                        "find":  "t.isWin?e(\"check-box\",{staticStyle:{\"margin-top\":\"10px\"},attrs:{checked:t.mediaDefaultPlayer",
+                        "repl":  "/*nd_purify*/!1?e(\"check-box\",{staticStyle:{\"margin-top\":\"10px\"},attrs:{checked:t.mediaDefaultPlayer"
+                    },
+                    {
+                        "file":  "70.js",
+                        "name":  "settings.menu-privacy 设置: 移除「隐私设置」菜单（每份菜单配置）",
+                        "kind":  "literal",
+                        "find":  "{name:\"隐私设置\",logType:\"privacySet\",type:1,order:Ze.Privacy},",
+                        "repl":  "/*nd_purify*/"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "filelist_misc.dblclick-download-open 精简: 双击文件 = 下载后打开（主窗口）",
+                        "kind":  "literal",
+                        "find":  "case 24:if(navigator.onLine||se.app.$networkOnline||",
+                        "repl":  "case 24:/*nd_purify*/if(s.path\u0026\u0026\"/\"===s.path.charAt(0)\u0026\u0026!/^\\/_pcs_\\.(knowledge_subscribe|sharedir_receive)/.test(s.path)){(function(){var __d=!1,__go=function(){if(__d)return;__d=!0;i.addDownloadTask([{md5:s.md5||\"\",size:s.size,is_dir:0,server_path:s.path,from_manual:1,downloadAndEditSwitch:!0}])};try{se.app.$getLocalPathFromDownloadHistory(s.path,function(e,t){if(__d)return;if(0===e\u0026\u0026t\u0026\u0026ay.existsSync(t)){__d=!0;se.app.$openImageViewer(\u0027\"\u0027+t+\u0027\"\u0027);return}__go()})}catch(__e){}setTimeout(__go,1500)})();return n.abrupt(\"return\")}if(navigator.onLine||se.app.$networkOnline||"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.preview-download 精简: 预览总入口 = 下载后打开（其它窗口/列表）",
+                        "kind":  "literal",
+                        "find":  "preview(e,t){e.previewStartTime=Date.now();",
+                        "repl":  "preview(e,t,__s=i(118).default){/*nd_purify*/try{var __p=e\u0026\u0026(e.server_path||e.path),__f=t\u0026\u0026t.from;if(__p\u0026\u0026\"/\"===String(__p).charAt(0)\u0026\u0026!/^\\/_pcs_\\.(knowledge_subscribe|sharedir_receive)/.test(String(__p))\u0026\u0026!e.from_uk\u0026\u0026!e.fromUk\u0026\u0026!e.shareInfo\u0026\u0026!e.share_info\u0026\u0026!e.sender\u0026\u0026!e.fileUrl\u0026\u0026!e.isChat\u0026\u0026(!__f||(__f!==d.pe\u0026\u0026\"conversation\"!==__f))){var __d=!1,__go=function(){if(__d)return;__d=!0;__s.dispatch(\"downloading/addDownloadTask\",[{md5:e.md5||\"\",size:e.size,is_dir:0,server_path:String(__p),from_manual:1,downloadAndEditSwitch:!0}])};try{R.$getLocalPathFromDownloadHistory(String(__p),function(c,l){if(__d)return;if(0===c\u0026\u0026l\u0026\u0026window.require\u0026\u0026window.require(\"fs\").existsSync(l)){__d=!0;R.$openImageViewer(\u0027\"\u0027+l+\u0027\"\u0027);return}__go()})}catch(__e){}setTimeout(__go,1500);return Promise.resolve({fs_id:e.fs_id})}}catch(__e){}e.previewStartTime=Date.now();"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "slim.safebox-tab 精简: 隐藏空间(保险箱)标签",
+                        "kind":  "literal",
+                        "find":  "{key:10,text:\"隐藏空间\",index:i(10),subEvt:\"concealEvt\",isShow:t(10),group:2},",
+                        "repl":  "/*nd_purify*/"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "slim.recycle-tab 精简: 回收站标签",
+                        "kind":  "literal",
+                        "find":  ",{key:13,text:\"回收站\",index:i(13),subEvt:\"recycleEvt\",isShow:t(13),group:2}",
+                        "repl":  "/*nd_purify*/"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.safebox-info 精简: safebox gating (右键/header-more/移动复制对话框 隐藏空间, operateShow)",
+                        "kind":  "literal",
+                        "find":  "[I](e,t){e.safeBoxInfo=t}",
+                        "repl":  "[I](e,t){/*nd_purify*/}"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.route-recycle 精简: recycle bin route",
+                        "kind":  "literal",
+                        "find":  "{path:\"/RecycleBin\",name:\"RecycleBin\",component:()=\u003ei.e(175).then(i.bind(null,6835))},",
+                        "repl":  "{path:\"/RecycleBin\",name:\"RecycleBin\",redirect:{name:\"allFile\"}},/*nd_purify*/"
+                    },
+                    {
+                        "file":  "renderer.js",
+                        "name":  "renderer.route-safebox 精简: safebox route",
+                        "kind":  "literal",
+                        "find":  "{path:\"/safebox\",name:\"safebox\",component:()=\u003ePromise.all([i.e(20),i.e(1),i.e(2),i.e(5),i.e(49)]).then(i.bind(null,6774))},",
+                        "repl":  "{path:\"/safebox\",name:\"safebox\",redirect:{name:\"allFile\"}},/*nd_purify*/"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "slim.backup-guide 精简: 自动备份引导弹窗(tryShowBackupGuide)",
+                        "kind":  "literal",
+                        "find":  "tryShowBackupGuide:function(){",
+                        "repl":  "tryShowBackupGuide:function(){/*nd_purify*/return;"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "slim.backup-banner-poll 精简: 自动备份横幅状态轮询(tpBackup)",
+                        "kind":  "literal",
+                        "find":  "initAutoBackupState:function(){",
+                        "repl":  "initAutoBackupState:function(){/*nd_purify*/return;"
+                    },
+                    {
+                        "file":  "59.js",
+                        "name":  "slim.upload-backup-banner 精简: 上传页备份横幅",
+                        "kind":  "literal",
+                        "find":  "visible:function(){",
+                        "repl":  "visible:function(){/*nd_purify*/return!1;"
+                    },
+                    {
+                        "file":  "70.js",
+                        "name":  "settings.menu-backup 精简: 设置「备份设置」菜单（每份菜单配置）",
+                        "kind":  "literal",
+                        "find":  "{name:\"备份设置\",logType:\"backupSet\",type:1,order:Ze.Backup}",
+                        "repl":  "/*nd_purify*/"
+                    },
+                    {
+                        "file":  "70.js",
+                        "name":  "settings.secondary-password 精简: 安全 \u003e 二级密码（仅用于隐藏空间）",
+                        "kind":  "literal",
+                        "find":  "e(\"section\",{staticClass:\"safety-section safety-secondary-password\"},[",
+                        "repl":  "e(\"section\",{staticClass:\"safety-section safety-secondary-password\",staticStyle:{display:\"none\"}},[/*nd_purify*/"
+                    },
+                    {
+                        "file":  "89.js",
+                        "name":  "settings.bubble-backup 精简: 悬浮球菜单「自动备份」项",
+                        "kind":  "literal",
+                        "find":  "{id:\"backup\",icon:T.a,label:\"文件夹自动备份\"},",
+                        "repl":  "/*nd_purify*/"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main_extra.tray-recycle-bin 精简: tray menu: 进入回收站 (main process, non-native tray)",
+                        "kind":  "literal",
+                        "find":  "{label:\"进入回收站\",click:()=\u003e{const e=i.app.mainBrowserwindow;e\u0026\u0026(Object(S.a)(),e.webContents.send(R,{name:\"RecycleBin\"}))}},",
+                        "repl":  "/*nd_purify*/"
+                    },
+                    {
+                        "file":  "54.js",
+                        "name":  "toolbar_menu.search-right-toolbar 工具条(右,搜索页): 去保险箱/备份/办公/AI",
+                        "kind":  "literal",
+                        "find":  "i=Object(j.a)([t],this.rightAvailableW);return this.hiddenToolbarItems",
+                        "repl":  "i=Object(j.a)([(function(x){/*nd_purify*/var B=[\"new_note\",\"record\",\"lead_pand\",\"export_safe\",\"move_to_safe\",\"lock_safe\",\"add_backup\",\"add_to_knowledge\",\"ai_summary\",\"ai_photo\",\"switch_text\",\"file_qa\",\"cloud_print\",\"free_board\",\"ai_video_edit\"];return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x})(t)],this.rightAvailableW);return this.hiddenToolbarItems"
+                    },
+                    {
+                        "file":  "72.js",
+                        "name":  "toolbar_menu.search-right-toolbar 工具条(右,搜索页): 去保险箱/备份/办公/AI",
+                        "kind":  "literal",
+                        "find":  "i=Object(z.a)([t],this.rightAvailableW);return this.hiddenToolbarItems",
+                        "repl":  "i=Object(z.a)([(function(x){/*nd_purify*/var B=[\"new_note\",\"record\",\"lead_pand\",\"export_safe\",\"move_to_safe\",\"lock_safe\",\"add_backup\",\"add_to_knowledge\",\"ai_summary\",\"ai_photo\",\"switch_text\",\"file_qa\",\"cloud_print\",\"free_board\",\"ai_video_edit\"];return x\u0026\u0026Array.isArray(x.items)?Object.assign({},x,{items:x.items.filter(function(i){return!i||B.indexOf(i.key)\u003c0})}):x})(t)],this.rightAvailableW);return this.hiddenToolbarItems"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main_extra.telemetry-crash 后台减负: telemetry/crash reporting (S01)",
+                        "kind":  "literal",
+                        "find":  "!h.a\u0026\u0026w\u0026\u0026w.start({productName:\"baidunetdisk\",companyName:\"baidu\",submitURL:n,uploadToServer:!0})",
+                        "repl":  "/*nd_purify*/0"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main_extra.telemetry-sentry 后台减负: telemetry (S02)",
+                        "kind":  "literal",
+                        "find":  "g\u0026\u0026e\u0026\u0026g.init({dsn:e,release:",
+                        "repl":  "g\u0026\u0026e\u0026\u0026/*nd_purify*/!1\u0026\u0026g.init({dsn:e,release:"
+                    },
+                    {
+                        "file":  "main.js",
+                        "name":  "main_extra.telemetry-memory 后台减负: telemetry (S03)",
+                        "kind":  "literal",
+                        "find":  "const{startMonitorMemory:x}=t(159);if(x(),",
+                        "repl":  "const{startMonitorMemory:x}=t(159);if(/*nd_purify*/0,"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "slim.bg-ai-collect 后台减负: AI收藏/seston剪贴板监听 (S07)",
+                        "kind":  "literal",
+                        "find":  "se.app.$seston.monitorClipboardChange(Zh.b.ECLIPBOARDTYPE_AI_COLLECT),",
+                        "repl":  "/*nd_purify*/0,"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "slim.bg-workspace 后台减负: 同步空间初始化 (S08)",
+                        "kind":  "literal",
+                        "find":  "se.app.$workspace\u0026\u0026se.app.$workspace.initWorkSpaceCallback()",
+                        "repl":  "/*nd_purify*/0"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "slim.bg-cloudprint 后台减负: 云打印注册 (S09)",
+                        "kind":  "literal",
+                        "find":  "se.app.$cloudPrint.cloudPrintRegister(),",
+                        "repl":  "/*nd_purify*/0,"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "slim.bg-safebox 后台减负: 保险箱信息查询 (S10)",
+                        "kind":  "literal",
+                        "find":  "e.getSafeBoxInfo(),",
+                        "repl":  "/*nd_purify*/0,"
+                    },
+                    {
+                        "file":  "45.js",
+                        "name":  "slim.bg-ai-assistant 后台减负: AI助手服务推荐轮询 (S11)",
+                        "kind":  "literal",
+                        "find":  "startServiceRecommendPolling:function(){",
+                        "repl":  "startServiceRecommendPolling:function(){/*nd_purify*/return;"
+                    },
+                    {
+                        "file":  "index.html",
+                        "name":  "slim.renderer-script 注入渲染端样式脚本(index.html)",
+                        "kind":  "literal",
+                        "find":  "\u003c/head\u003e",
+                        "repl":  "\u003cscript src=./__nd_purify_renderer.js\u003e\u003c/script\u003e\u003c/head\u003e"
+                    }
+                ]
+}

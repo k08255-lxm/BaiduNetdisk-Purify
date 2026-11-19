@@ -1,7 +1,95 @@
 {
     "format":  1,
-    "generated":  "2026-11-19T07:59:17Z",
+    "generated":  "2026-11-19T10:22:16Z",
     "schemes":  [
+                    {
+                        "name":  "8.10.3.103",
+                        "coreSha256":  "d11d88a8685b326a3f515f4f138aa9b91db3df7c6d90f34d7acd1295cfeebe6b",
+                        "outputSha256":  "e4a34830c29c50fd15af3604d6df104142e994cbbc6771c00dad3b32d918ee95",
+                        "files":  {
+                                      "components.json":  "e5ec12dc3777ea660b7eed6c1a696fdebe45c8bf8418d5c5a0aa2130931d13fc",
+                                      "files/__nd_purify_main.js":  "3358f580d06409a5dc77ce5cea654ef9d022786b1f1a93d8ece0631a6da45600",
+                                      "files/__nd_purify_renderer.js":  "1e7f3bf28e063b6483dc8a051ba562034a5dfc5227aca55a20e0dee4f2a0c1ac",
+                                      "patchset.json":  "c32c60199236603a8e19e5fdb8ccfd04f9b9ce2ae865ff88cff3aa83d1c5b950"
+                                  }
+                    },
+                    {
+                        "name":  "8.5.9.102",
+                        "coreSha256":  "a83cb7e838bed47e727668cd4db42692ec2f654161779dc5154cf629c3e03b7c",
+                        "outputSha256":  "a0c84b6081c95de1dbab5a5936ffbcf7be55f7b2a387fca8e2b0b1da779d5b8e",
+                        "files":  {
+                                      "components.json":  "e5ec12dc3777ea660b7eed6c1a696fdebe45c8bf8418d5c5a0aa2130931d13fc",
+                                      "files/__nd_purify_main.js":  "3358f580d06409a5dc77ce5cea654ef9d022786b1f1a93d8ece0631a6da45600",
+                                      "files/__nd_purify_renderer.js":  "1e7f3bf28e063b6483dc8a051ba562034a5dfc5227aca55a20e0dee4f2a0c1ac",
+                                      "patchset.json":  "ac77d133a06a25c0cfd959b95783c6cbe2fbb6b6aa185c5534241110e08d96c3"
+                                  }
+                    },
+                    {
+                        "name":  "8.6.8.102",
+                        "coreSha256":  "dc76f204c9ae7e5c6ccd16eeb3205d2c9f7a7714b47185b99f382666b8f7c377",
+                        "outputSha256":  "e651bec9f8f50710f60ebf79d879d918491f7418777c46e026b2c9c3a0b8517f",
+                        "files":  {
+                                      "components.json":  "e5ec12dc3777ea660b7eed6c1a696fdebe45c8bf8418d5c5a0aa2130931d13fc",
+                                      "files/__nd_purify_main.js":  "3358f580d06409a5dc77ce5cea654ef9d022786b1f1a93d8ece0631a6da45600",
+                                      "files/__nd_purify_renderer.js":  "1e7f3bf28e063b6483dc8a051ba562034a5dfc5227aca55a20e0dee4f2a0c1ac",
+                                      "patchset.json":  "3bb784b03d0a6db92a26165e87ede39732065b030b27c71d4f67cfff6a6d0672"
+                                  }
+                    },
+                    {
+                        "name":  "8.7.9.102",
+                        "coreSha256":  "c832c7871d155d898ab08363db3e57b4adc653304dc699ada13bff11be81fa64",
+                        "outputSha256":  "288924072857c981cf67636200e9bc3337b05e0438893b73ca03261870d65876",
+                        "files":  {
+                                      "components.json":  "e5ec12dc3777ea660b7eed6c1a696fdebe45c8bf8418d5c5a0aa2130931d13fc",
+                                      "files/__nd_purify_main.js":  "3358f580d06409a5dc77ce5cea654ef9d022786b1f1a93d8ece0631a6da45600",
+                                      "files/__nd_purify_renderer.js":  "1e7f3bf28e063b6483dc8a051ba562034a5dfc5227aca55a20e0dee4f2a0c1ac",
+                                      "patchset.json":  "57a202658a4e12e3135575fa3b352f2a0ab3dca07d6aa98c939a0ff0fe254a27"
+                                  }
+                    },
+                    {
+                        "name":  "8.8.3.101",
+                        "coreSha256":  "0a2a7bbeea5c922f05172d49e2bb54d84c273b1685e6d5187e3cdc0ae02ad604",
+                        "outputSha256":  "5c98f540f045a758ede26f843398b57bee7758970b3db17a5538f3bfd1fc4a81",
+                        "files":  {
+                                      "components.json":  "e5ec12dc3777ea660b7eed6c1a696fdebe45c8bf8418d5c5a0aa2130931d13fc",
+                                      "files/__nd_purify_main.js":  "3358f580d06409a5dc77ce5cea654ef9d022786b1f1a93d8ece0631a6da45600",
+                                      "files/__nd_purify_renderer.js":  "1e7f3bf28e063b6483dc8a051ba562034a5dfc5227aca55a20e0dee4f2a0c1ac",
+                                      "patchset.json":  "80b58055d4e145a4dfa571d65e3d57e9771ee0db364da10e6b36efd9db6ab007"
+                                  }
+                    },
+                    {
+                        "name":  "8.8.6.102",
+                        "coreSha256":  "1f6322bae629adb9173dc872912663efe1c125f2896cb4cf38cb05be3f6e3cd4",
+                        "outputSha256":  "9689ff69aed8c40a1cb50f074faaddf9a228e6f7a63a84f3f2b7315ede8123c3",
+                        "files":  {
+                                      "components.json":  "e5ec12dc3777ea660b7eed6c1a696fdebe45c8bf8418d5c5a0aa2130931d13fc",
+                                      "files/__nd_purify_main.js":  "3358f580d06409a5dc77ce5cea654ef9d022786b1f1a93d8ece0631a6da45600",
+                                      "files/__nd_purify_renderer.js":  "1e7f3bf28e063b6483dc8a051ba562034a5dfc5227aca55a20e0dee4f2a0c1ac",
+                                      "patchset.json":  "c22ddcc439bb63902ede8b1bb078f54c72ae983d9313f41f2227ab6dde19ad3f"
+                                  }
+                    },
+                    {
+                        "name":  "8.8.8.101",
+                        "coreSha256":  "eaee4eac8b2ca51a8c558ef85c9e579b7bc5fb4e7b5ba008e4794b0fa3ae8576",
+                        "outputSha256":  "94864fe130427cc7e96519c21dfec7f66d2a35fbb6dd385526278593a13253be",
+                        "files":  {
+                                      "components.json":  "e5ec12dc3777ea660b7eed6c1a696fdebe45c8bf8418d5c5a0aa2130931d13fc",
+                                      "files/__nd_purify_main.js":  "3358f580d06409a5dc77ce5cea654ef9d022786b1f1a93d8ece0631a6da45600",
+                                      "files/__nd_purify_renderer.js":  "1e7f3bf28e063b6483dc8a051ba562034a5dfc5227aca55a20e0dee4f2a0c1ac",
+                                      "patchset.json":  "e203ddcc4152cb8c75eb85cb4dc8c4ba3d9845059091c5a04f6d1355c718598a"
+                                  }
+                    },
+                    {
+                        "name":  "8.9.2.101",
+                        "coreSha256":  "4a7162eef04ecd44413fe427e8268fcecf4b3a03589467437869a2e6ab11655c",
+                        "outputSha256":  "66010edcc3c6fb46d29eba34c933cc22d90a2b05398bf0fd6c3026661e8714ff",
+                        "files":  {
+                                      "components.json":  "e5ec12dc3777ea660b7eed6c1a696fdebe45c8bf8418d5c5a0aa2130931d13fc",
+                                      "files/__nd_purify_main.js":  "3358f580d06409a5dc77ce5cea654ef9d022786b1f1a93d8ece0631a6da45600",
+                                      "files/__nd_purify_renderer.js":  "1e7f3bf28e063b6483dc8a051ba562034a5dfc5227aca55a20e0dee4f2a0c1ac",
+                                      "patchset.json":  "e751d9db35c0387a596196d3eb84a96362bf262806f16b5cab7973a28f9e1fbd"
+                                  }
+                    },
                     {
                         "name":  "8.9.7.101",
                         "coreSha256":  "280214b601b9dd28b932879c931d7bc9735bfd39b231e99412327aa3ea8c71c2",

@@ -1,0 +1,36 @@
+{
+ "note": "Paths relative to the BaiduNetdisk install dir. Items are MOVED (never deleted) to nd_purify\\removed\\<path> and restored by uninstall.ps1. Each one was removed and the client re-tested (start, browse, upload, download, share, open-after-download).",
+ "components": [
+  "module\\ImageViewer",
+  "module\\AiEngine",
+  "module\\SpeechSDK",
+  "module\\VastPlayer",
+  "module\\BrowserEngine\\BaiduNetdiskPlayerLaunch.exe",
+  "module\\BrowserEngine\\localplayer.dll",
+  "module\\BrowserEngine\\vastplayer.dll",
+  "module\\BrowserEngine\\videoipc.dll",
+  "module\\BrowserEngine\\syncengine.dll",
+  "module\\BrowserEngine\\entsyncengine.dll",
+  "module\\BrowserEngine\\resources\\video_player.asar",
+  "module\\BrowserEngine\\resources\\5bc5a1fc2a45d4cb1415284e9905af6b",
+  "YunOfficeAddin.dll",
+  "YunOfficeAddin64.dll",
+  "netdisk-chrome-ext.crx",
+  "kernel_o.dll",
+  "BugReport.exe",
+  "HelpUtility.exe"
+ ],
+ "shellFiles": [
+  "YunShellExt64.dll",
+  "YunShellExtV1.dll",
+  "YunShellExtV164.dll",
+  "ShellFolder64.exe",
+  "ShellFolderDepend64.dll",
+  "SystemFeatureSDK.dll",
+  "SystemFeatureSDK64.dll",
+  "sysres\\YunShellCommand64.dll",
+  "sysres\\YunShellThumnail64.dll",
+  "sysres\\BaiduNetdisk.msix",
+  "sysres\\BaiduNetdiskAI.msix"
+ ]
+}

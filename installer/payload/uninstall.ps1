@@ -2,7 +2,11 @@
 # Restores the original core.asar, AutoUpdate settings and component registrations; removes the
 # logon task and the notice hider. Exits 0 when there is nothing to restore.
 # Source is ASCII-only on purpose (Windows PowerShell 5.1 reads BOM-less scripts as ANSI).
-param([string]$InstallPath, [string]$LogFile)
+param(
+  [string]$InstallPath,
+  [string]$LogFile,
+  [switch]$NoTask   # Match install.ps1 -NoTask for a standalone test install.
+)
 # A child of PowerShell 7 inherits its PSModulePath, which breaks module autoloading in Windows PowerShell 5.1
 # (cmdlets such as Get-FileHash / Register-ScheduledTask then appear to be missing). Reset to the 5.1 defaults.
 if ($PSVersionTable.PSEdition -ne 'Core') { $env:PSModulePath = (Join-Path $env:SystemRoot 'system32\WindowsPowerShell\v1.0\Modules') + ';' + (Join-Path $env:ProgramFiles 'WindowsPowerShell\Modules') }
@@ -55,11 +59,12 @@ function Find-InstallPath {
 
 try {
   Write-Log '=== BaiduNetdisk de-marketing: uninstall ==='
-  # watcher + task go first, regardless of the client state
-  Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -match 'nd_hide_notice' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-  Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
-  Write-Log 'watcher + logon task removed'
+  if (-not $NoTask) {
+    Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+      Where-Object { $_.CommandLine -match 'nd_hide_notice' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+    Write-Log 'watcher + logon task removed'
+  }
 
   $root = Find-InstallPath
   if (-not $root) { Write-Log 'BaiduNetdisk not found; nothing else to restore'; exit 0 }
