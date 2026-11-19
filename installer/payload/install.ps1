@@ -1,11 +1,11 @@
 # BaiduNetdisk de-marketing -- installer step (run by Setup.exe; also usable standalone)
 # Patches the user's OWN official BaiduNetdisk installation in place. Fully reversible via uninstall.ps1.
 # The patch for a client build is a "scheme" (patchset.json + injected files + components.json), chosen ONLY by the
-# SHA-256 of that build's original core.asar. Schemes are fetched from the project's GitHub (signed index, every file
-# hash-checked); if that is unreachable, the schemes bundled in this setup are used.
+# SHA-256 of that build's original core.asar. Schemes are downloaded from GitHub and checked against a signed index.
 # Exit codes: 0 ok | 10 BaiduNetdisk not found | 11 client changed after patching (uninstall the patch first)
 #             12 client could not be closed | 13 patch/verify failed (nothing changed) | 14 access denied
-#             15 no scheme for this client build | 16 scheme verification failed (signature/hash) | 1 other error
+#             15 no scheme for this client build | 16 scheme verification failed (signature/hash)
+#             17 scheme download failed | 18 incompatible scheme index format | 1 other error
 # Source is ASCII-only on purpose (Windows PowerShell 5.1 reads BOM-less scripts as ANSI).
 param(
   [string]$InstallPath,
@@ -14,9 +14,9 @@ param(
   [switch]$NoTask,
   [switch]$KeepComponents,   # do not move the non-netdisk components (components.json) out of the install
   [switch]$ShellExt,         # also remove the Explorer integration (needs a UAC confirmation; skipped if declined)
-  [string]$SchemeBaseUrl = 'https://raw.githubusercontent.com/lastbaigeiapi/BaiduNetdisk-Purify/main/schemes',  # or a local folder
-  [switch]$Offline,          # do not go online; use only the schemes bundled with the setup
-  [string]$ResolveOnly       # test aid: resolve the scheme for this core.asar SHA-256, change nothing, exit 0/15/16
+  [ValidatePattern('^https?://')]
+  [string]$SchemeBaseUrl = 'https://raw.githubusercontent.com/lastbaigeiapi/BaiduNetdisk-Purify/main/schemes',
+  [string]$ResolveOnly       # test aid: download and verify the scheme for this hash without patching the client
 )
 # A child of PowerShell 7 inherits its PSModulePath, which breaks module autoloading in Windows PowerShell 5.1
 # (cmdlets such as Get-FileHash / Register-ScheduledTask then appear to be missing). Reset to the 5.1 defaults.
@@ -75,19 +75,23 @@ function Move-Components([string]$root, $rels, [string]$tag) {
   return @($n, $bytes)
 }
 
-# ---- schemes: signed index + hash-checked files, online first, bundled as fallback ----
-$script:SchemeTamper = $false
+# ---- schemes: download the signed index and hash-checked files before changing the client ----
 $script:SchemeTmp = Join-Path $env:TEMP ('nd_scheme_' + [guid]::NewGuid().ToString('N'))
-function Get-Bytes([string]$src) {
-  if ($src -match '^https?://') {
+function Get-RemoteBytes([string]$src) {
+  try {
     $req = [System.Net.HttpWebRequest]::Create($src)
     $req.Timeout = 20000; $req.ReadWriteTimeout = 60000; $req.UserAgent = 'BaiduNetdisk-Purify-setup'
-    $resp = $req.GetResponse()
-    try { $ms = New-Object System.IO.MemoryStream; $resp.GetResponseStream().CopyTo($ms); return , $ms.ToArray() } finally { $resp.Close() }
+    $req.CachePolicy = [System.Net.Cache.RequestCachePolicy]::new([System.Net.Cache.RequestCacheLevel]::NoCacheNoStore)
+    $response = $req.GetResponse()
+    $buffer = [System.IO.MemoryStream]::new()
+    try {
+      $response.GetResponseStream().CopyTo($buffer)
+      return , $buffer.ToArray()
+    } finally { $buffer.Dispose(); $response.Dispose() }
+  } catch {
+    throw [System.Net.WebException]::new("download failed for ${src}: $($_.Exception.Message)", $_.Exception)
   }
-  return , [System.IO.File]::ReadAllBytes($src)
 }
-function Join-Src([string]$base, [string]$rel) { if ($base -match '^https?://') { return $base.TrimEnd('/') + '/' + $rel }; return (Join-Path $base ($rel -replace '/', '\')) }
 function Sha-Bytes([byte[]]$b) { $h = [System.Security.Cryptography.SHA256]::Create(); try { return ([System.BitConverter]::ToString($h.ComputeHash($b)) -replace '-', '').ToLowerInvariant() } finally { $h.Dispose() } }
 function Test-IndexSignature([byte[]]$data, [byte[]]$sigText) {
   try {
@@ -99,39 +103,30 @@ function Test-IndexSignature([byte[]]$data, [byte[]]$sigText) {
 }
 # fetch index (+signature) from $base, pick the entry for $origSha, copy its verified files to $dest
 function Get-SchemeFrom([string]$base, [string]$origSha, [string]$dest) {
-  $idx = Get-Bytes (Join-Src $base 'index.json'); $sig = Get-Bytes (Join-Src $base 'index.json.sig')
-  if (-not (Test-IndexSignature $idx $sig)) { return @{ Status = 'bad signature' } }
+  $base = $base.TrimEnd('/')
+  $idx = Get-RemoteBytes "$base/index.json"
+  $sig = Get-RemoteBytes "$base/index.json.sig"
+  if (-not (Test-IndexSignature $idx $sig)) { return @{ Code = 16; Message = 'scheme index signature verification failed' } }
   $index = [System.Text.Encoding]::UTF8.GetString($idx) | ConvertFrom-Json
-  if ([int]$index.format -ne 1) { return @{ Status = ('unsupported index format ' + $index.format + ' (a newer setup is needed)') } }
+  if ([int]$index.format -ne 1) { return @{ Code = 18; Message = "unsupported scheme index format $($index.format)" } }
   $e = @($index.schemes) | Where-Object { [string]$_.coreSha256 -eq $origSha } | Select-Object -First 1
-  if (-not $e) { return @{ Status = 'no match'; Known = ((@($index.schemes) | ForEach-Object { $_.name }) -join ', ') } }
-  if ([string]$e.name -notmatch '^[A-Za-z0-9._-]+$') { return @{ Status = 'bad scheme name' } }
+  if (-not $e) { return @{ Code = 15; Message = "no scheme for original core.asar $origSha" } }
+  if ([string]$e.name -notmatch '^[A-Za-z0-9._-]+$') { return @{ Code = 16; Message = 'bad scheme name' } }
   foreach ($p in $e.files.PSObject.Properties) {
-    if ($p.Name -notmatch '^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$' -or $p.Name -match '\.\.') { return @{ Status = 'bad file name ' + $p.Name } }
-    $b = Get-Bytes (Join-Src $base ($e.name + '/' + $p.Name))
-    if ((Sha-Bytes $b) -ne [string]$p.Value) { return @{ Status = 'hash mismatch ' + $p.Name } }
+    if ($p.Name -notmatch '^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$' -or $p.Name -match '\.\.') { return @{ Code = 16; Message = 'bad file name ' + $p.Name } }
+    $b = Get-RemoteBytes "$base/$($e.name)/$($p.Name)"
+    if ((Sha-Bytes $b) -ne [string]$p.Value) { return @{ Code = 16; Message = 'hash mismatch ' + $p.Name } }
     $t = Join-Path $dest ($p.Name -replace '/', '\'); [void][System.IO.Directory]::CreateDirectory((Split-Path $t -Parent))
     [System.IO.File]::WriteAllBytes($t, $b)
   }
-  return @{ Status = 'ok'; Dir = $dest; Entry = $e }
+  return @{ Code = 0; Dir = $dest; Entry = $e }
 }
 function Resolve-Scheme([string]$origSha) {
-  if (-not $Offline -and $SchemeBaseUrl) {
-    try {
-      $r = Get-SchemeFrom $SchemeBaseUrl $origSha (Join-Path $script:SchemeTmp 'online')
-      Write-Log ("scheme (online, {0}): {1}{2}" -f $SchemeBaseUrl, $r.Status, $(if ($r.Known) { '; known: ' + $r.Known } else { '' }))
-      if ($r.Status -eq 'ok') { $r.From = 'online'; return $r }
-      if ($r.Status -ne 'no match' -and $r.Status -notlike 'unsupported index*') { $script:SchemeTamper = $true }
-    } catch { Write-Log ('scheme (online) unavailable: ' + $_.Exception.Message) }
+  try {
+    return Get-SchemeFrom $SchemeBaseUrl $origSha $script:SchemeTmp
+  } catch [System.Net.WebException] {
+    return @{ Code = 17; Message = $_.Exception.Message }
   }
-  $bundled = Join-Path $here 'schemes'
-  if (Test-Path -LiteralPath (Join-Path $bundled 'index.json')) {
-    $r = Get-SchemeFrom $bundled $origSha (Join-Path $script:SchemeTmp 'bundled')
-    Write-Log ("scheme (bundled): {0}{1}" -f $r.Status, $(if ($r.Known) { '; known: ' + $r.Known } else { '' }))
-    if ($r.Status -eq 'ok') { $r.From = 'bundled'; return $r }
-    if ($r.Status -ne 'no match') { $script:SchemeTamper = $true }
-  }
-  return $null
 }
 function Remove-SchemeTmp { try { if (Test-Path -LiteralPath $script:SchemeTmp) { [System.IO.Directory]::Delete($script:SchemeTmp, $true) } } catch {} }
 
@@ -155,9 +150,11 @@ function Find-InstallPath {
 
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
 if ($ResolveOnly) {
-  $r = Resolve-Scheme $ResolveOnly.ToLowerInvariant(); Remove-SchemeTmp
-  if ($r) { Write-Log ("resolve-only: scheme {0} ({1})" -f $r.Entry.name, $r.From); exit 0 }
-  if ($script:SchemeTamper) { exit 16 }; exit 15
+  $r = Resolve-Scheme $ResolveOnly.ToLowerInvariant()
+  if ($r.Code -ne 0) { Exit-With $r.Code $r.Message }
+  Write-Log ("resolve-only: scheme {0} (online)" -f $r.Entry.name)
+  Remove-SchemeTmp
+  exit 0
 }
 
 $stage = 'init'; $replaced = $false; $core = $null; $origBackup = $null
@@ -194,15 +191,12 @@ try {
   # ---- find the scheme for exactly this build ----
   $stage = 'scheme'
   $sch = Resolve-Scheme $wantOrig
-  if (-not $sch) {
-    if ($script:SchemeTamper) { Exit-With 16 'scheme verification failed (signature or file hash); nothing changed' }
-    Exit-With 15 "no patch scheme for this client build ($clientVer, core.asar $wantOrig); nothing changed"
-  }
+  if ($sch.Code -ne 0) { Exit-With $sch.Code $sch.Message }
   $schemeDir = $sch.Dir
   $set = [System.IO.File]::ReadAllText((Join-Path $schemeDir 'patchset.json'), $Utf8) | ConvertFrom-Json
   if ([string]$set.target.originalCoreSha256 -ne $wantOrig -or -not $set.expectedOutputSha256) { Exit-With 16 'scheme does not describe this core.asar' }
   $wantOut = [string]$set.expectedOutputSha256
-  Write-Log ("scheme: {0} ({1})" -f $sch.Entry.name, $sch.From)
+  Write-Log ("scheme: {0} (online)" -f $sch.Entry.name)
 
   # ---- close the client ----
   $stage = 'close'
@@ -250,7 +244,7 @@ try {
   if ((Sha $core) -ne $wantOut) { throw 'post-install verification failed' }
   $man.corePatched = $wantOut
   $man.appVersion = [string]$set.target.appVersion
-  foreach ($kv in @(@('scheme', [string]$sch.Entry.name), @('schemeFrom', [string]$sch.From))) {
+  foreach ($kv in @(@('scheme', [string]$sch.Entry.name), @('schemeFrom', 'online'))) {
     if ($man.PSObject.Properties.Name -contains $kv[0]) { $man.($kv[0]) = $kv[1] } else { $man | Add-Member -NotePropertyName $kv[0] -NotePropertyValue $kv[1] }
   }
   # keep a copy of the exact scheme that was applied (for diagnosis; the uninstaller does not need it)

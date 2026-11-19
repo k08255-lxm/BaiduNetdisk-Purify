@@ -1,9 +1,9 @@
 ﻿; 百度网盘纯净补丁 —— Inno Setup 安装脚本
-; 安装包只包含补丁器与补丁规则（不含任何百度网盘程序文件），在用户本机的正版客户端上打补丁。
+; 安装包从 GitHub 下载并验证补丁方案，再修改本机已安装的官方客户端。
 ; 打补丁发生在 PrepareToInstall 阶段（复制文件之前）：失败则安装直接中止，不留任何残留。
 
 ; 安装器本身的内部版本（只在补丁引擎变化时才需要改）；补丁方案按百度网盘版本另行在线获取，与此无关
-#define AppVer "1.2.0"
+#define AppVer "1.3.0"
 #define ProjectUrl "https://github.com/lastbaigeiapi/BaiduNetdisk-Purify"
 
 [Setup]
@@ -42,8 +42,6 @@ Name: "shellext"; Description: "移除资源管理器里的百度网盘右键菜
 
 [Files]
 Source: "payload\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
-; 内置的已签名方案：联网获取失败时的后备（与仓库 schemes\ 完全相同）
-Source: "..\schemes\*"; DestDir: "{app}\schemes"; Flags: ignoreversion recursesubdirs
 
 [Run]
 Filename: "{code:GetBaiduExe}"; Description: "立即启动百度网盘"; Flags: postinstall nowait skipifsilent; Check: HasBaiduExe
@@ -164,6 +162,10 @@ begin
                   '没有修改任何文件。已支持的版本见项目主页：' + #13#10 + '{#ProjectUrl}';
     16: Result := '补丁方案校验失败（签名或文件哈希不符），为安全起见已中止，没有修改任何文件。' + #13#10 +
                   '请到项目主页下载最新的安装程序：' + #13#10 + '{#ProjectUrl}';
+    17: Result := '无法从 GitHub 下载补丁方案。没有修改百度网盘文件。' + #13#10 +
+                  '请确认当前网络可访问 raw.githubusercontent.com，再重试。';
+    18: Result := '当前安装程序无法读取补丁方案索引。没有修改百度网盘文件。' + #13#10 +
+                  '请到项目主页检查是否有新版安装程序：' + #13#10 + '{#ProjectUrl}';
     12: Result := '无法关闭正在运行的百度网盘。请从任务栏托盘彻底退出百度网盘后重试。';
     13: Result := '补丁生成或校验失败，已中止，没有修改任何文件。';
     14: Result := '没有写入百度网盘安装目录的权限。请右键本安装程序，选择“以管理员身份运行”。';
@@ -180,14 +182,14 @@ var
 begin
   Result := '';
   if not GetVersionNumbersString(GetBaiduExe(''), ClientVer) then ClientVer := '未知版本';
-  // 注意：ExtractTemporaryFiles 会保留 DestDir 的字面目录名，文件实际位于 {tmp}\{app}\ 下（含子目录 files\）
+  // ExtractTemporaryFiles 会保留 DestDir 的字面目录名，文件实际位于 {tmp}\{app}\。
   ExtractTemporaryFiles('{app}\*');
   LogFile := ExpandConstant('{localappdata}\BaiduNetdiskPurify-install.log');
   Params := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{tmp}') + '\{app}\install.ps1"' +
             ' -InstallPath "' + BaiduRoot + '" -LogFile "' + LogFile + '"';
   if not WizardIsTaskSelected('slim') then Params := Params + ' -KeepComponents';
   if WizardIsTaskSelected('shellext') then Params := Params + ' -ShellExt';
-  WizardForm.PreparingLabel.Caption := '正在获取与百度网盘 ' + ClientVer + ' 对应的补丁方案并打补丁，请稍候（约 10~40 秒）……';
+  WizardForm.PreparingLabel.Caption := '正在从 GitHub 获取与百度网盘 ' + ClientVer + ' 对应的补丁方案，请稍候……';
   if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), Params, '', SW_HIDE,
               ewWaitUntilTerminated, ResultCode) then
   begin
