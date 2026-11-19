@@ -2,6 +2,7 @@
 // 被 patch.js（Node 构建）与 gen_patchset.js（导出给 PowerShell 补丁器）共同使用
 'use strict';
 const MARK = '/*nd_purify*/';
+const { videoFileCondition } = require('./portable/video_preview');
 
 // 文件操作工具条要移除的项（按 key）
 const TOOLBAR_LEFT_DROP = [
@@ -247,20 +248,21 @@ const PATCHES = [
     repl: MARK })),
 
   // ---------- 精简：在线预览 → 下载后用系统程序打开 ----------
-  // 自己网盘里的文件：若本地已下载过则直接打开，否则加入下载（下载完成由客户端自带的“下载并打开”流程触发打开）。
+  // 自己网盘里的非视频文件：若本地已下载过则直接打开，否则加入下载（由客户端的“下载并打开”流程打开）。
   // 查询下载历史 1.5 秒无回调则直接下载，避免双击无反应。他人分享/订阅/聊天文件保持原逻辑（转存前无法下载）。
   // 1) 主窗口：双击 / 回车 / 右键“打开”（openOrPreview 的普通文件分支）
-  { file: '45.js', name: '精简: 双击文件 = 下载后打开（主窗口）',
+  { file: '45.js', name: '精简: 双击非视频文件 = 下载后打开（主窗口）',
     find: 'case 24:if(navigator.onLine||G.app.$networkOnline||',
-    repl: 'case 24:' + MARK + 'if(s.path&&"/"===s.path.charAt(0)&&!' + OWN_PATH_RE + '.test(s.path)){(function(){var __d=!1,__go=function(){if(__d)return;__d=!0;' +
+    repl: 'case 24:' + MARK + 'if(s.path&&"/"===s.path.charAt(0)&&!' + OWN_PATH_RE + '.test(s.path)&&!' + videoFileCondition('s', 's.path') + '){(function(){var __d=!1,__go=function(){if(__d)return;__d=!0;' +
           'i.addDownloadTask([{md5:s.md5||"",size:s.size,is_dir:0,server_path:s.path,from_manual:1,downloadAndEditSwitch:!0}])};' +
           'try{G.app.$getLocalPathFromDownloadHistory(s.path,function(e,t){if(__d)return;if(0===e&&t&&Ib.existsSync(t)){__d=!0;G.app.$openImageViewer(\'"\'+t+\'"\');return}__go()})}catch(__e){}' +
           'setTimeout(__go,1500)})();return n.abrupt("return")}if(navigator.onLine||G.app.$networkOnline||' },
   // 2) 其余调用方（最近文件、搜索结果、时间线等直接调用 PreviewManager.preview 的地方）
-  { file: 'renderer.js', name: '精简: 预览总入口 = 下载后打开（其它窗口/列表）',
+  { file: 'renderer.js', name: '精简: 非视频预览 = 下载后打开（其它窗口/列表）',
     find: 'preview(e,t){e.previewStartTime=Date.now();',
     repl: 'preview(e,t){' + MARK + 'try{var __p=e&&(e.server_path||e.path),__f=t&&t.from;' +
-          'if(__p&&"/"===String(__p).charAt(0)&&!' + OWN_PATH_RE + '.test(String(__p))&&!e.from_uk&&!e.fromUk&&!e.shareInfo&&!e.share_info&&!e.sender&&!e.fileUrl&&!e.isChat&&(!__f||(__f!==p.Ae&&"conversation"!==__f))){' +
+          'if(__p&&"/"===String(__p).charAt(0)&&!' + OWN_PATH_RE + '.test(String(__p))&&!e.from_uk&&!e.fromUk&&!e.shareInfo&&!e.share_info&&!e.sender&&!e.fileUrl&&!e.isChat&&!' +
+          videoFileCondition('e', 'e.path||__p') + '&&(!__f||(__f!==p.Ae&&"conversation"!==__f))){' +
           'var __d=!1,__go=function(){if(__d)return;__d=!0;ne.default.dispatch("downloading/addDownloadTask",[{md5:e.md5||"",size:e.size,is_dir:0,server_path:String(__p),from_manual:1,downloadAndEditSwitch:!0}])};' +
           'try{se.$getLocalPathFromDownloadHistory(String(__p),function(c,l){if(__d)return;if(0===c&&l&&window.require&&window.require("fs").existsSync(l)){__d=!0;se.$openImageViewer(\'"\'+l+\'"\');return}__go()})}catch(__e){}' +
           'setTimeout(__go,1500);return Promise.resolve({fs_id:e.fs_id})}}catch(__e){}e.previewStartTime=Date.now();' },

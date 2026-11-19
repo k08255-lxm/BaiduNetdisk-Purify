@@ -23,6 +23,9 @@ namespace Purify
         private readonly Label compatibility = new Label { AccessibleName = "兼容性结果" };
         private readonly Label count = new Label { AccessibleName = "已选项目数" };
         private readonly Label operation = new Label { AccessibleName = "操作结果" };
+        private readonly CheckBox videoPreview = new CheckBox {
+            Text = "在网盘内预览视频（取消后下载再打开）", Checked = true, AutoSize = true, Margin = new Padding(0, 0, 0, 8)
+        };
         private readonly ListView options = new ListView {
             View = View.Details, CheckBoxes = true, FullRowSelect = true, MultiSelect = false,
             HeaderStyle = ColumnHeaderStyle.Nonclickable, AccessibleName = "可移除项目", Dock = DockStyle.Fill
@@ -129,6 +132,7 @@ namespace Purify
         {
             var card = Card(true);
             card.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            card.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             card.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             card.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             var row = Table(3);
@@ -137,16 +141,17 @@ namespace Purify
             row.Controls.Add(Heading("可移除项目"), 0, 0);
             row.Controls.Add(selectAll, 1, 0);
             row.Controls.Add(clearAll, 2, 0);
-            card.Controls.Add(row, 0, 0);
+            card.Controls.Add(row, 0, 1);
 
             options.Columns.Add("项目", 235);
             options.Columns.Add("文件位置", 460);
             options.Margin = Padding.Empty;
             options.ForeColor = Ink;
             options.BorderStyle = BorderStyle.FixedSingle;
-            card.Controls.Add(options, 0, 1);
+            card.Controls.Add(videoPreview, 0, 0);
+            card.Controls.Add(options, 0, 2);
             FormatCaption(count, new Padding(0, 8, 0, 0));
-            card.Controls.Add(count, 0, 2);
+            card.Controls.Add(count, 0, 3);
             return card;
         }
 
@@ -233,6 +238,8 @@ namespace Purify
                 var components = await Task.Run(() => state.InspectComponents(scheme));
                 PopulateOptions(components, canRestore && state.Record.registryBackedUp);
                 verifiedScheme = scheme;
+                videoPreview.Checked = !canRestore || state.Record.downloadVideos != true;
+                videoPreview.Visible = scheme.VideoDownloadRules != null;
                 SetStatus(compatibility, version + (scheme.IsLocal ? "  ·  已匹配本地内置方案" : "  ·  已匹配 GitHub 签名方案"), Green);
                 Report("已校验方案 " + scheme.Entry.name + "，可以选择要移除的项目。");
             }
@@ -282,6 +289,7 @@ namespace Purify
             var checkedItems = options.CheckedItems.Cast<ListViewItem>().ToList();
             var selections = checkedItems.Select(item => item.Tag as string).Where(path => path != null).ToList();
             bool removeOpenWith = checkedItems.Any(item => item.Tag == null);
+            bool downloadVideos = scheme != null && scheme.VideoDownloadRules != null && !videoPreview.Checked;
             string action = restoring ? "还原客户端" : "应用方案";
             string summary = restoring ? "" : "\n已勾选 " + checkedItems.Count + " 个移除项目。";
             if (MessageBox.Show(this, "操作时会关闭该目录下运行的百度网盘。请先完成上传和下载。" + summary + "\n\n继续" + action + "？",
@@ -300,9 +308,13 @@ namespace Purify
                         Program.Log(message);
                         feedback.Report(message);
                     }, true);
-                    return restoring ? service.Restore(client) : service.Apply(client, scheme, selections, removeOpenWith);
+                    return restoring ? service.Restore(client) : service.Apply(client, scheme, selections, removeOpenWith, downloadVideos);
                 });
-                if (complete && restoring) SetSelection(false);
+                if (complete && restoring)
+                {
+                    SetSelection(false);
+                    videoPreview.Checked = true;
+                }
                 SetStatus(operation, complete ? (restoring ? "客户端已还原" : "方案已应用") : "部分操作未完成，请查看日志",
                     complete ? Green : Amber);
             }
@@ -325,6 +337,7 @@ namespace Purify
             verifiedClient = null;
             verifiedScheme = null;
             canRestore = false;
+            videoPreview.Visible = false;
             options.Items.Clear();
             UpdateCount();
             SetStatus(compatibility, "选择安装目录后检查兼容性。", Muted);
@@ -373,6 +386,7 @@ namespace Purify
             apply.Enabled = !busy && verifiedScheme != null;
             restore.Enabled = !busy && canRestore;
             options.Enabled = selectAll.Enabled = clearAll.Enabled = apply.Enabled;
+            videoPreview.Enabled = apply.Enabled;
         }
 
         private void ResizeColumns()

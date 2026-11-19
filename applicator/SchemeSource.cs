@@ -140,12 +140,33 @@ namespace Purify
             }
             var rules = Formats.Decode<PatchSet>(files["patchset.json"]);
             var components = Formats.Decode<ComponentList>(files["components.json"]);
-            if (rules == null || rules.format != 1 || rules.target == null ||
-                rules.target.originalCoreSha256 != originalHash || rules.expectedOutputSha256 != entry.outputSha256 ||
-                rules.patches == null || rules.patches.Count == 0 || rules.newFiles == null ||
-                string.IsNullOrEmpty(rules.mark) || components == null || components.components == null)
+            if (!ValidRules(rules, originalHash) || rules.expectedOutputSha256 != entry.outputSha256 ||
+                components == null || components.components == null)
                 throw new InvalidDataException("方案内容与签名索引不一致。");
-            return new Scheme { Entry = entry, Rules = rules, Components = components.components, Files = files, IsLocal = local };
+
+            PatchSet videoDownloadRules = null;
+            byte[] variant;
+            if (files.TryGetValue("video-download.json", out variant))
+            {
+                videoDownloadRules = Formats.Decode<PatchSet>(variant);
+                if (!ValidRules(videoDownloadRules, originalHash) ||
+                    videoDownloadRules.expectedOutputSha256 == entry.outputSha256 ||
+                    videoDownloadRules.target.appVersion != rules.target.appVersion ||
+                    videoDownloadRules.mark != rules.mark || !videoDownloadRules.newFiles.SequenceEqual(rules.newFiles))
+                    throw new InvalidDataException("视频下载方案与基础方案不一致。");
+            }
+            return new Scheme {
+                Entry = entry, Rules = rules, VideoDownloadRules = videoDownloadRules,
+                Components = components.components, Files = files, IsLocal = local
+            };
+        }
+
+        private static bool ValidRules(PatchSet rules, string originalHash)
+        {
+            return rules != null && rules.format == 1 && rules.target != null &&
+                rules.target.originalCoreSha256 == originalHash &&
+                rules.expectedOutputSha256 != null && Sha256.IsMatch(rules.expectedOutputSha256) &&
+                rules.patches != null && rules.patches.Count != 0 && rules.newFiles != null && !string.IsNullOrEmpty(rules.mark);
         }
     }
 
@@ -153,6 +174,7 @@ namespace Purify
     {
         internal SchemeEntry Entry;
         internal PatchSet Rules;
+        internal PatchSet VideoDownloadRules;
         internal List<string> Components;
         internal Dictionary<string, byte[]> Files;
         internal bool IsLocal;

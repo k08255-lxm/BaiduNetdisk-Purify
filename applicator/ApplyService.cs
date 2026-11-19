@@ -17,8 +17,12 @@ namespace Purify
             this.configureDesktop = configureDesktop;
         }
 
-        internal bool Apply(ClientDirectory client, Scheme scheme, IEnumerable<string> selections, bool removeOpenWith)
+        internal bool Apply(ClientDirectory client, Scheme scheme, IEnumerable<string> selections, bool removeOpenWith, bool downloadVideos)
         {
+            var rules = downloadVideos ? scheme.VideoDownloadRules : scheme.Rules;
+            if (rules == null)
+                throw new InvalidOperationException("当前方案不支持切换视频打开方式。");
+            string expectedOutput = rules.expectedOutputSha256;
             bool complete = true;
             Locked(client, delegate
             {
@@ -34,20 +38,21 @@ namespace Purify
                 string output = Path.Combine(Path.GetTempPath(), "purify-" + Guid.NewGuid().ToString("N") + ".asar");
                 try
                 {
-                    if (state.CurrentHash != scheme.Entry.outputSha256)
+                    if (state.CurrentHash != expectedOutput)
                     {
-                        AsarPatch.Build(state.Source, output, scheme);
+                        AsarPatch.Build(state.Source, output, rules, scheme.Files);
                         log("规则锚点和补丁输出 SHA-256 已校验。");
                     }
                     client.CloseProcesses(log);
                     state.CheckUnchanged();
-                    Manifest record = state.PrepareBackup(scheme);
+                    Manifest record = state.PrepareBackup(scheme, rules);
                     if (File.Exists(output))
                         ClientState.SwapCopy(output, client.Core);
-                    if (Formats.Sha(client.Core) != scheme.Entry.outputSha256)
+                    if (Formats.Sha(client.Core) != expectedOutput)
                         throw new IOException("应用补丁后重新校验核心文件失败。");
-                    record.corePatched = scheme.Entry.outputSha256;
+                    record.corePatched = expectedOutput;
                     record.corePending = null;
+                    record.downloadVideos = scheme.VideoDownloadRules == null ? (bool?)null : downloadVideos;
                     state.Save(record);
                     state.DisableUpdater(record);
                     complete = state.RestoreComponents(log, unselected);

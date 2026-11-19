@@ -16,6 +16,7 @@ namespace Purify
         public bool renamedUpdater { get; set; }
         public bool updaterConfigPatched { get; set; }
         public bool registryBackedUp { get; set; }
+        public bool? downloadVideos { get; set; }
         public Dictionary<string, string> registeredAppValues { get; set; }
         public string scheme { get; set; }
         public string schemeFrom { get; set; }
@@ -62,7 +63,7 @@ namespace Purify
                 throw new IOException("百度网盘文件在准备过程中发生变化，请重新打开工具后重试。");
         }
 
-        internal Manifest PrepareBackup(Scheme scheme)
+        internal Manifest PrepareBackup(Scheme scheme, PatchSet rules)
         {
             var record = Record ?? new Manifest { installPath = Client.Root, coreOriginal = CurrentHash, installedBy = "applicator" };
             Directory.CreateDirectory(Client.Backup);
@@ -70,10 +71,10 @@ namespace Purify
                 SwapCopy(Client.Core, Client.Original);
             if (Formats.Sha(Client.Original) != record.coreOriginal)
                 throw new IOException("原版文件备份验证失败。");
-            record.appVersion = scheme.Rules.target.appVersion;
+            record.appVersion = rules.target.appVersion;
             record.scheme = scheme.Entry.name;
             record.schemeFrom = scheme.IsLocal ? "embedded" : "online";
-            record.corePending = scheme.Entry.outputSha256;
+            record.corePending = rules.expectedOutputSha256;
             Save(record);
             return record;
         }
@@ -204,25 +205,10 @@ namespace Purify
                     Directory.CreateDirectory(Client.Store);
                     Formats.WriteJson(Client.MoveLog, moves);
                 }
-                Directory.CreateDirectory(Path.GetDirectoryName(target));
-                try
-                {
-                    if (Directory.Exists(source))
-                        Directory.Move(source, target);
-                    else
-                        File.Move(source, target);
+                if (TryMoveComponent(source, target, "无法移出组件，已保留：" + relative, log))
                     log("已移出组件：" + relative);
-                }
-                catch (IOException ex)
-                {
-                    log("无法移动组件，已保留：" + relative + " (" + ex.Message + ")");
+                else
                     complete = false;
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    log("无法移动组件，已保留：" + relative + " (" + ex.Message + ")");
-                    complete = false;
-                }
             }
             return complete;
         }
@@ -249,16 +235,33 @@ namespace Purify
                     complete = false;
                     continue;
                 }
+                if (TryMoveComponent(source, target, "无法放回组件，备份已保留：" + move.rel, log))
+                    log("已还原组件：" + move.rel);
+                else
+                {
+                    remaining.Add(move);
+                    complete = false;
+                }
+            }
+            if (File.Exists(Client.MoveLog))
+                Formats.WriteJson(Client.MoveLog, remaining);
+            return complete;
+        }
+
+        private static bool TryMoveComponent(string source, string target, string failure, Action<string> log)
+        {
+            try
+            {
                 Directory.CreateDirectory(Path.GetDirectoryName(target));
                 if (Directory.Exists(source))
                     Directory.Move(source, target);
                 else
                     File.Move(source, target);
-                log("已还原组件：" + move.rel);
+                return true;
             }
-            if (File.Exists(Client.MoveLog))
-                Formats.WriteJson(Client.MoveLog, remaining);
-            return complete;
+            catch (IOException ex) { log(failure + " (" + ex.Message + ")"); }
+            catch (UnauthorizedAccessException ex) { log(failure + " (" + ex.Message + ")"); }
+            return false;
         }
 
         private List<RemovedItem> ReadMoves()
