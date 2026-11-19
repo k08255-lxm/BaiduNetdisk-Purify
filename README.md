@@ -7,11 +7,21 @@
 
 ## 下载与安装
 
-1. 从百度网盘官网 <https://pan.baidu.com/download> 安装官方客户端 **8.9.7**。
-2. 到 [Releases](../../releases) 下载 `BaiduNetdisk-Purify-Setup-1.1.0.exe`，双击安装（约 10~30 秒）。
+1. 安装一个**已支持版本**的官方百度网盘（见下表）。
+2. 下载安装器 **[BaiduNetdisk-Purify-Setup.exe](https://github.com/lastbaigeiapi/BaiduNetdisk-Purify/releases/latest/download/BaiduNetdisk-Purify-Setup.exe)**，双击安装（约 10~40 秒）。
 3. 从开始菜单 / 桌面图标正常打开百度网盘。**不要“以管理员身份运行”**（原因见常见问题）。
 
-系统要求：Windows 10 1809 及以上 / Windows 11，64 位。版本不是 8.9.7 build 497 时，安装器会拒绝并且**不改动任何文件**。
+系统要求：Windows 10 1809 及以上 / Windows 11，64 位。
+
+### 已支持的百度网盘版本
+
+安装器会读取你电脑上百度网盘的 `core.asar`，按它的 SHA-256 从本仓库获取**完全对应**的补丁方案。没有对应方案的版本会提示“暂不支持”，**不改动任何文件**。
+
+| 百度网盘版本 | 官方安装包 | 官方安装包 SHA-256 |
+|---|---|---|
+| 8.9.7（8.9.7.101） | [BaiduNetdisk_8.9.7.101.exe](https://issuepcdn.baidupcs.com/issue/netdisk/yunguanjia/BaiduNetdisk_8.9.7.101.exe) | `3673bd43e98af4c93d69fa7e85cf836fc0ef7791229b10d09127e9b4c3970569` |
+
+百度官网 <https://pan.baidu.com/download> 只提供最新版。上表链接是百度官方 CDN 上的历史版本，SHA-256 与微软 winget 软件仓库记录的一致。新版本的方案做好、测试通过后会加入此表，已下载的安装器无需更新即可使用。
 
 ### 安装选项（默认都勾选）
 
@@ -43,10 +53,12 @@
 ## 常见问题
 
 - **一直显示“应用程序被修改，请重新安装”**：百度网盘内置的完整性检查发现文件被修改后会弹这个框；补丁的后台程序会自动把它隐藏（网盘照常使用）。如果它一直显示，通常是百度网盘被“以管理员身份运行”了，Windows 不允许普通权限的程序操作管理员程序的窗口。正常方式打开即可。**不要点框里的“确定”或关闭按钮**，那会退出百度网盘。
-- **提示“版本不匹配”**：你的客户端不是 8.9.7 build 497，安装器没有改动任何文件。
+- **提示“暂时还没有适配你的版本”**：这个版本还没有方案，安装器没有改动任何文件。可以安装上表中的版本，或等待新方案。
+- **提示“方案校验失败”**：下载到的方案签名或哈希不对（可能被篡改或网络出错），安装器已中止且没有改动任何文件。请重试或下载最新安装器。
+- **断网能装吗**：能。获取在线方案失败时，会使用安装器内置的（同样经过签名校验的）方案。
 - **提示“没有写入权限”**：百度网盘装在 Program Files 等目录，请右键安装器“以管理员身份运行”。
 - **百度网盘装在别的位置（免安装版等）**：先打开百度网盘再运行安装器，安装器会从正在运行的进程找到它。
-- **想升级百度网盘**：先卸载补丁再升级；补丁只适配特定版本。
+- **想升级百度网盘**：先卸载补丁，再升级百度网盘，然后重新运行安装器（新版本需要已有对应方案）。
 - **日志**：`%LOCALAPPDATA%\BaiduNetdiskPurify-install.log`（安装）、`%APPDATA%\baidunetdisk\nd_purify.log`（被拦截的请求）、`%APPDATA%\baidunetdisk\nd_hide_notice.log`（提示隐藏）
 
 ## 工作原理
@@ -57,22 +69,30 @@
 - 修改 `core.asar` 会触发原生完整性检查的弹窗。`nd_hide_notice.ps1` 作为登录时启动的计划任务在后台运行（经 `conhost --headless` 启动，没有窗口），只用 `ShowWindow(SW_HIDE)` 隐藏这个弹窗，不点任何按钮。
 - 安装器（Inno Setup，按用户安装，无需管理员）在复制任何文件之前完成打补丁；失败则安装中止、零残留。PowerShell 补丁器 `nd_patcher.ps1` 不依赖 Node，输出是确定性的。
 
+### 补丁方案（schemes）
+
+每个百度网盘版本一份方案，放在 `schemes/<版本>/`：`patchset.json`（补丁规则 + 原版与输出的 SHA-256）、`files/`（注入模块）、`components.json`（精简时移出的组件）。目录名只是给人看的标签，**匹配只看原版 `core.asar` 的 SHA-256**。
+
+- `schemes/index.json` 列出所有方案及其中每个文件的 SHA-256，并用 RSA-3072 签名（`index.json.sig`）。安装器内置公钥 `installer/payload/scheme_pubkey.xml`。
+- 安装时先从 GitHub 获取索引并验签，再逐个下载方案文件、核对哈希；任何一步不通过都不会使用该在线方案，而是改用安装器内置的方案（同样验签）。两者都不可用时中止，不改动任何文件。
+- 私钥不在仓库里，只保存在维护者电脑上（Windows DPAPI 加密）。
+
 ## 目录结构
 
 ```
+schemes/                      按版本的补丁方案 + 已签名索引（安装器在线获取，也内置一份）
 installer/
   BaiduNetdiskPurify.iss      Inno Setup 脚本
   info_before.txt, lang/      安装须知、简体中文界面
   payload/                    安装包实际内容
-    install.ps1 / uninstall.ps1   安装 / 还原步骤
-    nd_patcher.ps1 + patchset.json 纯 PowerShell 补丁器 + 由 patchset_def.js 导出的规则
+    install.ps1 / uninstall.ps1   安装（含方案获取与校验）/ 还原步骤
+    nd_patcher.ps1            纯 PowerShell 补丁器（读取方案中的 patchset.json）
+    scheme_pubkey.xml         方案签名公钥
     nd_hide_notice.ps1        完整性提示隐藏器
     shellext.ps1              资源管理器集成的移除 / 恢复（带 .reg 备份）
-    components.json           精简时移出的组件清单
-    files/                    注入 core.asar 的模块
 patch/                        注入模块源码（过滤规则、渲染端样式）
 loader/purify_renderer.css    渲染端兜底样式（由 gen_renderer.py 生成 patch/__nd_purify_renderer.js）
-scripts/                      构建、测试与开发工具
+scripts/                      构建、测试、方案制作与跨版本移植工具
 docs/使用说明.txt
 ```
 
@@ -91,16 +111,21 @@ node scripts/patch.js <原版core.asar> out/core.asar tools patch
 node scripts/test_filter.js patch/__nd_purify_main.js
 node scripts/test_injected.js out/core.asar tools
 
-# 导出给 PowerShell 补丁器，并固定期望输出的哈希
-node scripts/gen_patchset.js installer/payload/patchset.json <原版SHA256>
-copy patch\__nd_purify_*.js installer\payload\files\
-powershell -ExecutionPolicy Bypass -File installer/payload/nd_patcher.ps1 -CoreAsar <原版core.asar> -OutAsar out/core_ps.asar -PatchDir installer/payload
-node scripts/gen_patchset.js installer/payload/patchset.json <原版SHA256> <上一步输出的SHA256>
+# 生成该版本的方案（用 PowerShell 补丁器实测出期望输出哈希），再重建并签名索引（签名需要维护者私钥）
+powershell -ExecutionPolicy Bypass -File scripts/make_scheme.ps1 -Name 8.9.7.101 -CoreAsar <原版core.asar> -Components schemes/8.9.7.101/components.json
+powershell -ExecutionPolicy Bypass -File scripts/sign_schemes.ps1
 
-ISCC installer/BaiduNetdiskPurify.iss            # 生成 installer/release/BaiduNetdisk-Purify-Setup-x.y.z.exe
+ISCC installer/BaiduNetdiskPurify.iss            # 生成 installer/release/BaiduNetdisk-Purify-Setup.exe
 ```
 
-本版本的补丁输出（PowerShell 补丁器）SHA-256 为 `5dc81e11b6fdc4490f1161013522c901a77f9a52fa3836b483fcead6b56f6168`。
+8.9.7.101 方案的补丁输出（PowerShell 补丁器）SHA-256 为 `5dc81e11b6fdc4490f1161013522c901a77f9a52fa3836b483fcead6b56f6168`。
+
+### 为新版本制作方案
+
+1. 用 7-Zip 从官方安装包中解出 `module\BrowserEngine\resources\core.asar`（**不要运行安装包**）。
+2. `node scripts/compat.js <core.asar> tools`：逐条检查现有规则在新版本里是否还能唯一命中；`node scripts/fuzzy_locate.js tools <core.asar> --list`：把变量名通配后看锚点能否重新定位。
+3. 复制 `scripts/patchset_def.js` 为该版本的定义，修正不再命中的规则，用 `node scripts/patch.js … <定义文件>` 构建并跑 `test_injected.js`。
+4. 在真实安装的该版本上完成功能测试后，`make_scheme.ps1 -Def <定义文件>` + `sign_schemes.ps1`，提交 `schemes/`。
 
 ## 许可
 

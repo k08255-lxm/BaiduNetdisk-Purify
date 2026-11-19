@@ -1,10 +1,11 @@
-// 把 patchset_def.js 的补丁规则导出为 patchset.json，供无需 Node 的 PowerShell 补丁器使用
-// 用法: node gen_patchset.js <out.json> <originalSha256> [expectedOutSha256]
+// 把补丁定义（默认 patchset_def.js）导出为 patchset.json，供无需 Node 的 PowerShell 补丁器使用
+// 用法: node gen_patchset.js <out.json> <originalSha256> [expectedOutSha256 | -] [defPath] [label]
+//   defPath: 该版本的补丁定义模块（默认 ./patchset_def.js）；label: 仅供人看的版本说明，不参与匹配（匹配只看 SHA-256）
 'use strict';
-const fs = require('fs');
-const { MARK, PATCHES, NEW_FILES } = require('./patchset_def.js');
-const [OUT, ORIG, EXPECTED] = process.argv.slice(2);
-if (!OUT || !ORIG) { console.error('usage: node gen_patchset.js <out.json> <originalSha256> [expectedOutSha256]'); process.exit(2); }
+const fs = require('fs'), path = require('path');
+const [OUT, ORIG, EXPECTED, DEF, LABEL] = process.argv.slice(2);
+if (!OUT || !ORIG) { console.error('usage: node gen_patchset.js <out.json> <originalSha256> [expectedOutSha256] [defPath] [label]'); process.exit(2); }
+const { MARK, PATCHES, NEW_FILES } = require(DEF ? path.resolve(DEF) : './patchset_def.js');
 
 const PH = n => '\u0000G' + n + '\u0000';  // 分组占位符（模板中由 PowerShell 替换为实际捕获组）
 const patches = PATCHES.map(p => {
@@ -19,8 +20,8 @@ const patches = PATCHES.map(p => {
 const doc = {
   format: 1,
   product: 'BaiduNetdisk de-marketing patch',
-  target: { appVersion: '8.9.7 / build 497', originalCoreSha256: ORIG.toLowerCase() },
-  expectedOutputSha256: (EXPECTED || '').toLowerCase(),
+  target: { appVersion: LABEL || '', originalCoreSha256: ORIG.toLowerCase() },
+  expectedOutputSha256: (EXPECTED && EXPECTED !== '-' ? EXPECTED : '').toLowerCase(),   // '-' = not measured yet (PS 5.1 drops '' args)
   mark: MARK,
   newFiles: NEW_FILES,
   patches,

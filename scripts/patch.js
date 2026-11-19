@@ -1,13 +1,13 @@
 // 百度网盘 core.asar 去营销补丁器
-// 用法: node patch.js <原始core.asar> <输出core.asar> <tools目录> <patch目录>
+// 用法: node patch.js <原始core.asar> <输出core.asar> <tools目录> <patch目录> [补丁定义模块，默认 ./patchset_def.js]
 // 总是从“原始(未修改)”的 core.asar 重新生成，可重复执行；任何锚点不唯一即中止，不产出半成品。
 'use strict';
 const fs = require('fs'), path = require('path'), os = require('os');
-const [SRC, OUT, TOOLS, PATCHDIR] = process.argv.slice(2);
-if (!SRC || !OUT || !TOOLS || !PATCHDIR) { console.error('usage: node patch.js <src.asar> <out.asar> <toolsDir> <patchDir>'); process.exit(2); }
+const [SRC, OUT, TOOLS, PATCHDIR, DEF] = process.argv.slice(2);
+if (!SRC || !OUT || !TOOLS || !PATCHDIR) { console.error('usage: node patch.js <src.asar> <out.asar> <toolsDir> <patchDir> [defPath]'); process.exit(2); }
 const asar = require(path.join(path.resolve(TOOLS), 'node_modules', '@electron', 'asar'));
 
-const { MARK, PATCHES, NEW_FILES } = require('./patchset_def.js');
+const { MARK, PATCHES, NEW_FILES } = require(DEF ? path.resolve(DEF) : './patchset_def.js');
 
 (async () => {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'nd_purify_'));

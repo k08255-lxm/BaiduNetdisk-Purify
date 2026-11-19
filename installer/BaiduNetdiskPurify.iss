@@ -2,13 +2,17 @@
 ; 安装包只包含补丁器与补丁规则（不含任何百度网盘程序文件），在用户本机的正版客户端上打补丁。
 ; 打补丁发生在 PrepareToInstall 阶段（复制文件之前）：失败则安装直接中止，不留任何残留。
 
-#define AppVer "1.1.0"
+; 安装器本身的内部版本（只在补丁引擎变化时才需要改）；补丁方案按百度网盘版本另行在线获取，与此无关
+#define AppVer "1.2.0"
+#define ProjectUrl "https://github.com/lastbaigeiapi/BaiduNetdisk-Purify"
 
 [Setup]
 AppId={{9B2E6F4A-3C1D-4E8B-A7F2-5D6C0B1E9A37}
 AppName=百度网盘纯净补丁
 AppVersion={#AppVer}
-AppVerName=百度网盘纯净补丁 {#AppVer}（适配百度网盘 8.9.7）
+AppVerName=百度网盘纯净补丁
+AppPublisherURL={#ProjectUrl}
+AppSupportURL={#ProjectUrl}
 AppPublisher=个人制作（非百度官方）
 DefaultDirName={localappdata}\Programs\BaiduNetdiskPurify
 DisableDirPage=yes
@@ -21,7 +25,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 InfoBeforeFile=info_before.txt
 OutputDir=release
-OutputBaseFilename=BaiduNetdisk-Purify-Setup-{#AppVer}
+OutputBaseFilename=BaiduNetdisk-Purify-Setup
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -38,6 +42,8 @@ Name: "shellext"; Description: "移除资源管理器里的百度网盘右键菜
 
 [Files]
 Source: "payload\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+; 内置的已签名方案：联网获取失败时的后备（与仓库 schemes\ 完全相同）
+Source: "..\schemes\*"; DestDir: "{app}\schemes"; Flags: ignoreversion recursesubdirs
 
 [Run]
 Filename: "{code:GetBaiduExe}"; Description: "立即启动百度网盘"; Flags: postinstall nowait skipifsilent; Check: HasBaiduExe
@@ -138,7 +144,8 @@ begin
   begin
     MsgBox('未检测到百度网盘。' + #13#10#13#10 +
            '本程序只是补丁，不包含百度网盘本体。请先从百度网盘官网' + #13#10 +
-           'https://pan.baidu.com/download 安装官方客户端（8.9.7 版本），然后再运行本安装程序。' + #13#10#13#10 +
+           'https://pan.baidu.com/download 安装官方客户端，然后再运行本安装程序。' + #13#10 +
+           '已支持的百度网盘版本见项目主页：{#ProjectUrl}' + #13#10#13#10 +
            '如果你的百度网盘装在其它位置（例如免安装版），请先打开百度网盘，再运行本安装程序。',
            mbError, MB_OK);
     Result := False;
@@ -147,12 +154,16 @@ begin
   Result := True;
 end;
 
-function ExitCodeMessage(Code: Integer): String;
+function ExitCodeMessage(Code: Integer; const ClientVer: String): String;
 begin
   case Code of
     10: Result := '未找到百度网盘的安装文件。请确认已安装官方客户端。';
-    11: Result := '你安装的百度网盘版本与本补丁不匹配（本补丁只适配 8.9.7 / build 497）。' + #13#10 +
-                  '为安全起见没有修改任何文件。';
+    11: Result := '检测到百度网盘在打补丁之后被更新或改动过。' + #13#10 +
+                  '请先在“设置 → 应用 → 已安装的应用”中卸载本补丁，再重新运行本安装程序。没有修改任何文件。';
+    15: Result := '暂时还没有适配你的百度网盘版本（' + ClientVer + '）的补丁方案。' + #13#10 +
+                  '没有修改任何文件。已支持的版本见项目主页：' + #13#10 + '{#ProjectUrl}';
+    16: Result := '补丁方案校验失败（签名或文件哈希不符），为安全起见已中止，没有修改任何文件。' + #13#10 +
+                  '请到项目主页下载最新的安装程序：' + #13#10 + '{#ProjectUrl}';
     12: Result := '无法关闭正在运行的百度网盘。请从任务栏托盘彻底退出百度网盘后重试。';
     13: Result := '补丁生成或校验失败，已中止，没有修改任何文件。';
     14: Result := '没有写入百度网盘安装目录的权限。请右键本安装程序，选择“以管理员身份运行”。';
@@ -165,9 +176,10 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;
-  Params, LogFile: String;
+  Params, LogFile, ClientVer: String;
 begin
   Result := '';
+  if not GetVersionNumbersString(GetBaiduExe(''), ClientVer) then ClientVer := '未知版本';
   // 注意：ExtractTemporaryFiles 会保留 DestDir 的字面目录名，文件实际位于 {tmp}\{app}\ 下（含子目录 files\）
   ExtractTemporaryFiles('{app}\*');
   LogFile := ExpandConstant('{localappdata}\BaiduNetdiskPurify-install.log');
@@ -175,7 +187,7 @@ begin
             ' -InstallPath "' + BaiduRoot + '" -LogFile "' + LogFile + '"';
   if not WizardIsTaskSelected('slim') then Params := Params + ' -KeepComponents';
   if WizardIsTaskSelected('shellext') then Params := Params + ' -ShellExt';
-  WizardForm.PreparingLabel.Caption := '正在为百度网盘打补丁，请稍候（约 10~30 秒）……';
+  WizardForm.PreparingLabel.Caption := '正在获取与百度网盘 ' + ClientVer + ' 对应的补丁方案并打补丁，请稍候（约 10~40 秒）……';
   if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), Params, '', SW_HIDE,
               ewWaitUntilTerminated, ResultCode) then
   begin
@@ -183,5 +195,5 @@ begin
     Exit;
   end;
   if ResultCode <> 0 then
-    Result := ExitCodeMessage(ResultCode) + #13#10#13#10 + '详细日志：' + LogFile;
+    Result := ExitCodeMessage(ResultCode, ClientVer) + #13#10#13#10 + '详细日志：' + LogFile;
 end;

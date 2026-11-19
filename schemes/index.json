@@ -1,0 +1,17 @@
+{
+    "format":  1,
+    "generated":  "2026-11-19T07:59:17Z",
+    "schemes":  [
+                    {
+                        "name":  "8.9.7.101",
+                        "coreSha256":  "280214b601b9dd28b932879c931d7bc9735bfd39b231e99412327aa3ea8c71c2",
+                        "outputSha256":  "5dc81e11b6fdc4490f1161013522c901a77f9a52fa3836b483fcead6b56f6168",
+                        "files":  {
+                                      "components.json":  "e5ec12dc3777ea660b7eed6c1a696fdebe45c8bf8418d5c5a0aa2130931d13fc",
+                                      "files/__nd_purify_main.js":  "3358f580d06409a5dc77ce5cea654ef9d022786b1f1a93d8ece0631a6da45600",
+                                      "files/__nd_purify_renderer.js":  "1e7f3bf28e063b6483dc8a051ba562034a5dfc5227aca55a20e0dee4f2a0c1ac",
+                                      "patchset.json":  "5ba3e851f346a4039dee2d4080597af64a3b94c44ba9896b9d874ea1f4996d6e"
+                                  }
+                    }
+                ]
+}

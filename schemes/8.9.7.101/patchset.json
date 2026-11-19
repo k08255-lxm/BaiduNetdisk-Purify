@@ -2,7 +2,7 @@
  "format": 1,
  "product": "BaiduNetdisk de-marketing patch",
  "target": {
-  "appVersion": "8.9.7 / build 497",
+  "appVersion": "8.9.7.101",
   "originalCoreSha256": "280214b601b9dd28b932879c931d7bc9735bfd39b231e99412327aa3ea8c71c2"
  },
  "expectedOutputSha256": "5dc81e11b6fdc4490f1161013522c901a77f9a52fa3836b483fcead6b56f6168",

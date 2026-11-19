@@ -1,7 +1,11 @@
 # BaiduNetdisk de-marketing -- installer step (run by Setup.exe; also usable standalone)
 # Patches the user's OWN official BaiduNetdisk installation in place. Fully reversible via uninstall.ps1.
-# Exit codes: 0 ok | 10 BaiduNetdisk not found | 11 unsupported client version | 12 client could not be closed
-#             13 patch/verify failed (nothing changed) | 14 access denied (run as administrator) | 1 other error
+# The patch for a client build is a "scheme" (patchset.json + injected files + components.json), chosen ONLY by the
+# SHA-256 of that build's original core.asar. Schemes are fetched from the project's GitHub (signed index, every file
+# hash-checked); if that is unreachable, the schemes bundled in this setup are used.
+# Exit codes: 0 ok | 10 BaiduNetdisk not found | 11 client changed after patching (uninstall the patch first)
+#             12 client could not be closed | 13 patch/verify failed (nothing changed) | 14 access denied
+#             15 no scheme for this client build | 16 scheme verification failed (signature/hash) | 1 other error
 # Source is ASCII-only on purpose (Windows PowerShell 5.1 reads BOM-less scripts as ANSI).
 param(
   [string]$InstallPath,
@@ -9,7 +13,10 @@ param(
   [switch]$KeepComponentRegistration,
   [switch]$NoTask,
   [switch]$KeepComponents,   # do not move the non-netdisk components (components.json) out of the install
-  [switch]$ShellExt          # also remove the Explorer integration (needs a UAC confirmation; skipped if declined)
+  [switch]$ShellExt,         # also remove the Explorer integration (needs a UAC confirmation; skipped if declined)
+  [string]$SchemeBaseUrl = 'https://raw.githubusercontent.com/lastbaigeiapi/BaiduNetdisk-Purify/main/schemes',  # or a local folder
+  [switch]$Offline,          # do not go online; use only the schemes bundled with the setup
+  [string]$ResolveOnly       # test aid: resolve the scheme for this core.asar SHA-256, change nothing, exit 0/15/16
 )
 # A child of PowerShell 7 inherits its PSModulePath, which breaks module autoloading in Windows PowerShell 5.1
 # (cmdlets such as Get-FileHash / Register-ScheduledTask then appear to be missing). Reset to the 5.1 defaults.
@@ -24,7 +31,7 @@ function Write-Log([string]$m) {
   Write-Host $line
   try { [System.IO.File]::AppendAllText($LogFile, $line + "`r`n", $Utf8) } catch {}
 }
-function Exit-With([int]$code, [string]$msg) { Write-Log ("EXIT {0}: {1}" -f $code, $msg); exit $code }
+function Exit-With([int]$code, [string]$msg) { Write-Log ("EXIT {0}: {1}" -f $code, $msg); Remove-SchemeTmp; exit $code }
 function Sha([string]$p) {
   $fs = [System.IO.File]::OpenRead($p); $h = [System.Security.Cryptography.SHA256]::Create()
   try { return ([System.BitConverter]::ToString($h.ComputeHash($fs)) -replace '-', '').ToLowerInvariant() } finally { $h.Dispose(); $fs.Dispose() }
@@ -68,6 +75,66 @@ function Move-Components([string]$root, $rels, [string]$tag) {
   return @($n, $bytes)
 }
 
+# ---- schemes: signed index + hash-checked files, online first, bundled as fallback ----
+$script:SchemeTamper = $false
+$script:SchemeTmp = Join-Path $env:TEMP ('nd_scheme_' + [guid]::NewGuid().ToString('N'))
+function Get-Bytes([string]$src) {
+  if ($src -match '^https?://') {
+    $req = [System.Net.HttpWebRequest]::Create($src)
+    $req.Timeout = 20000; $req.ReadWriteTimeout = 60000; $req.UserAgent = 'BaiduNetdisk-Purify-setup'
+    $resp = $req.GetResponse()
+    try { $ms = New-Object System.IO.MemoryStream; $resp.GetResponseStream().CopyTo($ms); return , $ms.ToArray() } finally { $resp.Close() }
+  }
+  return , [System.IO.File]::ReadAllBytes($src)
+}
+function Join-Src([string]$base, [string]$rel) { if ($base -match '^https?://') { return $base.TrimEnd('/') + '/' + $rel }; return (Join-Path $base ($rel -replace '/', '\')) }
+function Sha-Bytes([byte[]]$b) { $h = [System.Security.Cryptography.SHA256]::Create(); try { return ([System.BitConverter]::ToString($h.ComputeHash($b)) -replace '-', '').ToLowerInvariant() } finally { $h.Dispose() } }
+function Test-IndexSignature([byte[]]$data, [byte[]]$sigText) {
+  try {
+    $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider; $rsa.PersistKeyInCsp = $false
+    $rsa.FromXmlString([System.IO.File]::ReadAllText((Join-Path $here 'scheme_pubkey.xml')))
+    $sig = [Convert]::FromBase64String([System.Text.Encoding]::ASCII.GetString($sigText).Trim())
+    return $rsa.VerifyData($data, 'SHA256', $sig)
+  } catch { return $false }
+}
+# fetch index (+signature) from $base, pick the entry for $origSha, copy its verified files to $dest
+function Get-SchemeFrom([string]$base, [string]$origSha, [string]$dest) {
+  $idx = Get-Bytes (Join-Src $base 'index.json'); $sig = Get-Bytes (Join-Src $base 'index.json.sig')
+  if (-not (Test-IndexSignature $idx $sig)) { return @{ Status = 'bad signature' } }
+  $index = [System.Text.Encoding]::UTF8.GetString($idx) | ConvertFrom-Json
+  if ([int]$index.format -ne 1) { return @{ Status = ('unsupported index format ' + $index.format + ' (a newer setup is needed)') } }
+  $e = @($index.schemes) | Where-Object { [string]$_.coreSha256 -eq $origSha } | Select-Object -First 1
+  if (-not $e) { return @{ Status = 'no match'; Known = ((@($index.schemes) | ForEach-Object { $_.name }) -join ', ') } }
+  if ([string]$e.name -notmatch '^[A-Za-z0-9._-]+$') { return @{ Status = 'bad scheme name' } }
+  foreach ($p in $e.files.PSObject.Properties) {
+    if ($p.Name -notmatch '^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$' -or $p.Name -match '\.\.') { return @{ Status = 'bad file name ' + $p.Name } }
+    $b = Get-Bytes (Join-Src $base ($e.name + '/' + $p.Name))
+    if ((Sha-Bytes $b) -ne [string]$p.Value) { return @{ Status = 'hash mismatch ' + $p.Name } }
+    $t = Join-Path $dest ($p.Name -replace '/', '\'); [void][System.IO.Directory]::CreateDirectory((Split-Path $t -Parent))
+    [System.IO.File]::WriteAllBytes($t, $b)
+  }
+  return @{ Status = 'ok'; Dir = $dest; Entry = $e }
+}
+function Resolve-Scheme([string]$origSha) {
+  if (-not $Offline -and $SchemeBaseUrl) {
+    try {
+      $r = Get-SchemeFrom $SchemeBaseUrl $origSha (Join-Path $script:SchemeTmp 'online')
+      Write-Log ("scheme (online, {0}): {1}{2}" -f $SchemeBaseUrl, $r.Status, $(if ($r.Known) { '; known: ' + $r.Known } else { '' }))
+      if ($r.Status -eq 'ok') { $r.From = 'online'; return $r }
+      if ($r.Status -ne 'no match' -and $r.Status -notlike 'unsupported index*') { $script:SchemeTamper = $true }
+    } catch { Write-Log ('scheme (online) unavailable: ' + $_.Exception.Message) }
+  }
+  $bundled = Join-Path $here 'schemes'
+  if (Test-Path -LiteralPath (Join-Path $bundled 'index.json')) {
+    $r = Get-SchemeFrom $bundled $origSha (Join-Path $script:SchemeTmp 'bundled')
+    Write-Log ("scheme (bundled): {0}{1}" -f $r.Status, $(if ($r.Known) { '; known: ' + $r.Known } else { '' }))
+    if ($r.Status -eq 'ok') { $r.From = 'bundled'; return $r }
+    if ($r.Status -ne 'no match') { $script:SchemeTamper = $true }
+  }
+  return $null
+}
+function Remove-SchemeTmp { try { if (Test-Path -LiteralPath $script:SchemeTmp) { [System.IO.Directory]::Delete($script:SchemeTmp, $true) } } catch {} }
+
 function Find-InstallPath {
   if ($InstallPath) { return $InstallPath.TrimEnd('\') }
   foreach ($k in 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
@@ -86,6 +153,13 @@ function Find-InstallPath {
   return $null
 }
 
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+if ($ResolveOnly) {
+  $r = Resolve-Scheme $ResolveOnly.ToLowerInvariant(); Remove-SchemeTmp
+  if ($r) { Write-Log ("resolve-only: scheme {0} ({1})" -f $r.Entry.name, $r.From); exit 0 }
+  if ($script:SchemeTamper) { exit 16 }; exit 15
+}
+
 $stage = 'init'; $replaced = $false; $core = $null; $origBackup = $null
 try {
   Write-Log '=== BaiduNetdisk de-marketing: install ==='
@@ -95,31 +169,40 @@ try {
   if (-not (Test-Path -LiteralPath $core)) { Exit-With 10 "core.asar not found under $root" }
   Write-Log "install path: $root"
 
-  $set = [System.IO.File]::ReadAllText((Join-Path $here 'patchset.json'), (New-Object System.Text.UTF8Encoding($false))) | ConvertFrom-Json
-  $wantOrig = [string]$set.target.originalCoreSha256
-  $wantOut  = [string]$set.expectedOutputSha256
   $purifyDir = Join-Path $root 'nd_purify'
   $backupDir = Join-Path $purifyDir 'backup'
   $manifest  = Join-Path $backupDir 'manifest.json'
   $origBackup = Join-Path $backupDir 'core.asar.orig'
   $cur = Sha $core
+  $clientVer = ''; try { $clientVer = (Get-Item -LiteralPath (Join-Path $root 'BaiduNetdisk.exe')).VersionInfo.FileVersion } catch {}
 
   # ---- decide source of the ORIGINAL core.asar ----
   $man = $null
   if (Test-Path -LiteralPath $manifest) {
     $man = Get-Content -LiteralPath $manifest -Raw | ConvertFrom-Json
-    if (-not (Test-Path -LiteralPath $origBackup) -or (Sha $origBackup) -ne $wantOrig) {
-      Exit-With 11 'existing backup is not the supported original version'
-    }
-    if ($cur -ne $wantOrig -and $cur -ne [string]$man.corePatched -and $cur -ne $wantOut) {
-      Exit-With 11 "installed core.asar ($cur) is neither original nor a known patched build (client updated?)"
+    if (-not (Test-Path -LiteralPath $origBackup)) { Exit-With 11 'patch record exists but the original core.asar backup is missing' }
+    $wantOrig = Sha $origBackup
+    if ($cur -ne $wantOrig -and $cur -ne [string]$man.corePatched) {
+      Exit-With 11 "installed core.asar ($cur) is neither the backed-up original nor our patched build (client updated? uninstall the patch first)"
     }
     $source = $origBackup; $mode = 'upgrade'
   } else {
-    if ($cur -ne $wantOrig) { Exit-With 11 "unsupported client version: core.asar $cur (supported: $($set.target.appVersion))" }
-    $source = $core; $mode = 'fresh'
+    $wantOrig = $cur; $source = $core; $mode = 'fresh'
   }
-  Write-Log "mode: $mode"
+  Write-Log ("mode: {0}; client {1}; original core.asar {2}" -f $mode, $clientVer, $wantOrig)
+
+  # ---- find the scheme for exactly this build ----
+  $stage = 'scheme'
+  $sch = Resolve-Scheme $wantOrig
+  if (-not $sch) {
+    if ($script:SchemeTamper) { Exit-With 16 'scheme verification failed (signature or file hash); nothing changed' }
+    Exit-With 15 "no patch scheme for this client build ($clientVer, core.asar $wantOrig); nothing changed"
+  }
+  $schemeDir = $sch.Dir
+  $set = [System.IO.File]::ReadAllText((Join-Path $schemeDir 'patchset.json'), $Utf8) | ConvertFrom-Json
+  if ([string]$set.target.originalCoreSha256 -ne $wantOrig -or -not $set.expectedOutputSha256) { Exit-With 16 'scheme does not describe this core.asar' }
+  $wantOut = [string]$set.expectedOutputSha256
+  Write-Log ("scheme: {0} ({1})" -f $sch.Entry.name, $sch.From)
 
   # ---- close the client ----
   $stage = 'close'
@@ -139,7 +222,7 @@ try {
   $stage = 'patch'
   $tmpOut = $core + '.nd-new'
   if (Test-Path -LiteralPath $tmpOut) { Remove-Item -LiteralPath $tmpOut -Force }
-  & (Join-Path $here 'nd_patcher.ps1') -CoreAsar $source -OutAsar $tmpOut -PatchDir $here 6>&1 | ForEach-Object { Write-Log "  patcher: $_" }
+  & (Join-Path $here 'nd_patcher.ps1') -CoreAsar $source -OutAsar $tmpOut -PatchDir $schemeDir 6>&1 | ForEach-Object { Write-Log "  patcher: $_" }
   if (-not (Test-Path -LiteralPath $tmpOut) -or (Sha $tmpOut) -ne $wantOut) { Exit-With 13 'patched output missing or hash mismatch' }
 
   # ---- backup + replace ----
@@ -166,6 +249,14 @@ try {
   Remove-Item -LiteralPath $tmpOut -Force
   if ((Sha $core) -ne $wantOut) { throw 'post-install verification failed' }
   $man.corePatched = $wantOut
+  $man.appVersion = [string]$set.target.appVersion
+  foreach ($kv in @(@('scheme', [string]$sch.Entry.name), @('schemeFrom', [string]$sch.From))) {
+    if ($man.PSObject.Properties.Name -contains $kv[0]) { $man.($kv[0]) = $kv[1] } else { $man | Add-Member -NotePropertyName $kv[0] -NotePropertyValue $kv[1] }
+  }
+  # keep a copy of the exact scheme that was applied (for diagnosis; the uninstaller does not need it)
+  $keep = Join-Path $purifyDir 'scheme'
+  if (Test-Path -LiteralPath $keep) { [System.IO.Directory]::Delete($keep, $true) }
+  Copy-Item -LiteralPath $schemeDir -Destination $keep -Recurse
   Write-Log 'core.asar: patched'
 
   # ---- disable auto-update (so the patch is not silently overwritten) ----
@@ -211,7 +302,7 @@ try {
 
   # ---- slim: move the non-netdisk components out of the install (image viewer, players, AI, sync engine, office add-in ...) ----
   $stage = 'components'
-  $comp = [System.IO.File]::ReadAllText((Join-Path $here 'components.json'), $Utf8) | ConvertFrom-Json
+  $comp = [System.IO.File]::ReadAllText((Join-Path $schemeDir 'components.json'), $Utf8) | ConvertFrom-Json   # per-build list
   if (-not $KeepComponents) {
     $r = Move-Components $root @($comp.components) 'setup'
     Write-Log ("components: moved {0} items ({1:N0} MB) to nd_purify\removed" -f $r[0], ($r[1] / 1MB))
@@ -266,11 +357,14 @@ try {
   }
 
   $man | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifest -Encoding UTF8
+  Remove-SchemeTmp
   Write-Log 'DONE'
   exit 0
 } catch {
   $msg = $_.Exception.Message
   Write-Log "ERROR at stage '$stage': $msg"
+  Remove-SchemeTmp
+  if ($stage -eq 'scheme') { exit 16 }
   if ($replaced -and $core -and $origBackup -and (Test-Path -LiteralPath $origBackup)) {
     try { Copy-Item -LiteralPath $origBackup -Destination $core -Force; Write-Log 'rolled back core.asar to original' } catch {}
   }
