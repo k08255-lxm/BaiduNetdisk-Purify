@@ -1,0 +1,8 @@
+{
+  "name": "baidunetdisk-purify-tools",
+  "private": true,
+  "description": "Build-time dependency for scripts/patch.js and the tests (asar read/write).",
+  "dependencies": {
+    "@electron/asar": "^3.2.17"
+  }
+}

@@ -1,0 +1,16 @@
+# build output
+out/
+installer/release/
+*.log
+
+# Baidu Netdisk files must never be committed
+*.asar
+*.asar.orig
+backup/
+extract/
+
+# tooling
+tools/node_modules/
+tools/package-lock.json
+node_modules/
+__pycache__/

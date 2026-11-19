@@ -1,0 +1,3 @@
+# Keep every file byte-exact: the patch output is verified by SHA-256, so line-ending
+# conversion (core.autocrlf) would break builds made from a checkout.
+* -text

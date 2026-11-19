@@ -1,0 +1,55 @@
+/* 百度网盘 去营销 —— 隐藏营销入口与推销提示（只作用于网盘自身界面） */
+
+/* 顶栏：游戏中心入口及其气泡 */
+.wp-header-game,
+.game-popover-wrap,
+
+/* 顶栏：会员中心/开通会员 按钮 */
+.wp-disk-header__vip-btn-wrapper,
+.wp-disk-header__vip-btn,
+
+/* 头像菜单：推广频道、“创建团队”推广（新版卡片已在数据层去掉，以下为旧版卡片/兜底） */
+.wp-header-user__drop-channel,
+.wp-header-user__create-team-wrapper,
+.wp-header-user__create-team-title,
+.wp-header-user__buy-btn,                                       /* 旧版卡片：开通/续费按钮 */
+.wp-s-header-user__drop-ai-points,                              /* 旧版卡片：AI点数 */
+.uip-ai-area,                                                   /* 新版卡片：AI点数 */
+.wp-header-user__tooltip,                                       /* 会员到期/续费提示气泡 */
+
+/* 左侧栏底部：“下载手机/各平台客户端”入口 */
+.wp-aside-nav__main-utils,
+
+/* 会员促销/签约/续费 弹层 */
+.auto-renew-guide,
+.limit-time-guide,
+.vip-cycle-guide__popper,
+.suprise-gift,
+
+/* 外置组件推广：版本更新引导窗（会诱导设“智能看图/智能播放器”为默认）、新功能推广气泡 */
+.update-guide,
+.lead-tip-box,
+
+/* 库库AI / AI 工具：搜索框“库库AI·搜知识库”模式页签与下拉、“AI工具箱全新升级”引导卡片 */
+.search-scene__tab--genflow,
+.genflow-dropdown,
+.ai-tool-card,
+
+/* 设置页：与网盘无关的项 */
+.set-ai-assistant,                                              /* 云一朵(AI助手)设置 */
+.privacy-friends,                                               /* 好友验证 */
+.privacy-shopping,                                              /* 商品推荐 */
+.privacy-authorisation,                                         /* 智能化功能授权 */
+.notification-desktop-conversation-option,                      /* 桌面对话浮窗消息通知 */
+.notification-bubble-column > .notification-option:first-child,/* 好友消息通知 */
+
+/* 各类广告/推销引导条 */
+.nd-ad-guide,
+.watch-adv-speed-coupon-guide,
+.video-skip-ad-guide,
+.location-video-buy-svip,
+.wp-s-work-coupon-hoc,
+.wp-s-share-to-link__share-work-coupon {
+  display: none !important;
+  pointer-events: none !important;
+}
