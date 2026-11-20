@@ -25,7 +25,10 @@ const rendererDownloads = new vm.Script(rendererGuard[1] + 'Boolean(' + renderer
 const cases = [
   [{ path: '/film.mp4', category: 1 }, downloadVideos],
   [{ path: '/film.MKV' }, downloadVideos],
-  [{ path: '/recording.m2ts', category: 6 }, downloadVideos],
+  [{ path: '/recording.m2ts', category: null }, downloadVideos],
+  [{ path: '/recording.m2ts', category: 6 }, true],
+  [{ path: '/app.ts', category: 6 }, true],
+  [{ path: '/x.dat', category: 6 }, true],
   [{ path: '/extensionless', category: '1' }, downloadVideos],
   [{ path: '/_pcs_.sharedir_receive/clip.mp4', category: 1 }, false],
   [{ path: '/report.pdf', category: 4 }, true],

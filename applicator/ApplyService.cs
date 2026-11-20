@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 
@@ -8,6 +9,17 @@ namespace Purify
 {
     internal sealed class ApplyService
     {
+        internal const string VideoPreviewConflict = "网盘内预览需要播放器组件。请取消勾选这些组件，或关闭「在网盘内预览视频」。";
+        private static readonly HashSet<string> PlaybackComponents = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+            @"module\VastPlayer",
+            @"module\BrowserEngine\BaiduNetdiskPlayerLaunch.exe",
+            @"module\BrowserEngine\localplayer.dll",
+            @"module\BrowserEngine\vastplayer.dll",
+            @"module\BrowserEngine\videoipc.dll",
+            @"module\BrowserEngine\resources\video_player.asar",
+            @"module\BrowserEngine\resources\5bc5a1fc2a45d4cb1415284e9905af6b"
+        };
+
         private readonly Action<string> log;
         private readonly bool configureDesktop;
 
@@ -33,6 +45,8 @@ namespace Purify
                 var selected = new HashSet<string>(selections, StringComparer.OrdinalIgnoreCase);
                 if (!unselected.IsSupersetOf(selected))
                     throw new InvalidDataException("所选组件与匹配的方案不一致。");
+                if (HasVideoPreviewConflict(scheme, selected, downloadVideos))
+                    throw new InvalidOperationException(VideoPreviewConflict);
                 unselected.ExceptWith(selected);
 
                 string output = Path.Combine(Path.GetTempPath(), "purify-" + Guid.NewGuid().ToString("N") + ".asar");
@@ -45,6 +59,14 @@ namespace Purify
                     }
                     client.CloseProcesses(log);
                     state.CheckUnchanged();
+                    if (scheme.VideoDownloadRules != null && !downloadVideos)
+                    {
+                        var keepPlayer = new HashSet<string>(PlaybackComponents, StringComparer.OrdinalIgnoreCase);
+                        keepPlayer.IntersectWith(unselected);
+                        if (keepPlayer.Count != 0 && !state.RestoreComponents(log, keepPlayer))
+                            throw new IOException("播放器组件未能放回。请查看日志，或选择下载后打开视频。");
+                        unselected.ExceptWith(keepPlayer);
+                    }
                     Manifest record = state.PrepareBackup(scheme, rules);
                     if (File.Exists(output))
                         ClientState.SwapCopy(output, client.Core);
@@ -75,6 +97,11 @@ namespace Purify
                 finally { if (File.Exists(output)) File.Delete(output); }
             });
             return complete;
+        }
+
+        internal static bool HasVideoPreviewConflict(Scheme scheme, IEnumerable<string> selections, bool downloadVideos)
+        {
+            return scheme.VideoDownloadRules != null && !downloadVideos && selections.Any(PlaybackComponents.Contains);
         }
 
         internal bool Restore(ClientDirectory client)

@@ -290,6 +290,11 @@ namespace Purify
             var selections = checkedItems.Select(item => item.Tag as string).Where(path => path != null).ToList();
             bool removeOpenWith = checkedItems.Any(item => item.Tag == null);
             bool downloadVideos = scheme != null && scheme.VideoDownloadRules != null && !videoPreview.Checked;
+            if (!restoring && ApplyService.HasVideoPreviewConflict(scheme, selections, downloadVideos))
+            {
+                MessageBox.Show(this, ApplyService.VideoPreviewConflict, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             string action = restoring ? "还原客户端" : "应用方案";
             string summary = restoring ? "" : "\n已勾选 " + checkedItems.Count + " 个移除项目。";
             if (MessageBox.Show(this, "操作时会关闭该目录下运行的百度网盘。请先完成上传和下载。" + summary + "\n\n继续" + action + "？",
